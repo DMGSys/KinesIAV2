@@ -1,0 +1,12 @@
+{
+  "name": "kinesia",
+  "version": "1.0.0",
+  "description": "KinesIA - Gestión clínica para consultorios de kinesiología",
+  "scripts": {
+    "dev": "docker-compose up",
+    "build": "cd src/frontend && npm run build"
+  },
+  "keywords": ["kinesiologia", "react", "express", "mongodb"],
+  "author": "Diego Gatica",
+  "license": "MIT"
+}
