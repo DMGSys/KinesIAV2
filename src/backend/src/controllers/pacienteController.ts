@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { Paciente } from '../models/Paciente.js';
 import { AuthRequest } from '../middleware/auth.js';
+import { getNextSequence } from '../models/Counter.js';
 
 export const getPacientes = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -32,9 +33,17 @@ export const getPacienteById = async (req: AuthRequest, res: Response): Promise<
 export const createPaciente = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user?.id;
-    const paciente = new Paciente({ ...req.body, usuarioId: userId });
-    await paciente.save();
-    res.status(201).json(paciente);
+    const autoId = req.body.id === undefined || req.body.id === null || req.body.id === '';
+
+    if (autoId) {
+      const paciente = new Paciente({ ...req.body, id: await getNextSequence('pacientes'), usuarioId: userId });
+      await paciente.save();
+      res.status(201).json(paciente);
+    } else {
+      const paciente = new Paciente({ ...req.body, usuarioId: userId });
+      await paciente.save();
+      res.status(201).json(paciente);
+    }
   } catch (error) {
     res.status(500).json({ message: 'Error en el servidor' });
   }

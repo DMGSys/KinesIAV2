@@ -9,7 +9,7 @@ const User_js_1 = require("../models/User.js");
 const auth_js_1 = require("../middleware/auth.js");
 const register = async (req, res) => {
     try {
-        const { usuario, contrasena, nombre, apellido, correo, celular } = req.body;
+        const { usuario, contrasena, nombre, apellido, correo, celular, rol } = req.body;
         if (!usuario || !contrasena || !nombre || !apellido || !correo || !celular) {
             res.status(400).json({ message: 'Todos los campos son requeridos' });
             return;
@@ -29,7 +29,8 @@ const register = async (req, res) => {
             apellido,
             correo,
             celular,
-            activo: true
+            activo: true,
+            rol: rol || 'kinesiologo'
         });
         await user.save();
         res.status(201).json({ message: 'Usuario registrado exitosamente' });
@@ -56,7 +57,7 @@ const login = async (req, res) => {
             res.status(401).json({ message: 'Usuario o contraseña incorrectos' });
             return;
         }
-        const token = (0, auth_js_1.generateToken)(user._id.toString(), user.usuario);
+        const token = (0, auth_js_1.generateToken)(user._id.toString(), user.usuario, user.rol);
         res.json({
             token,
             user: {
@@ -65,7 +66,8 @@ const login = async (req, res) => {
                 nombre: user.nombre,
                 apellido: user.apellido,
                 correo: user.correo,
-                celular: user.celular
+                celular: user.celular,
+                rol: user.rol
             }
         });
     }
@@ -92,7 +94,8 @@ const getMe = async (req, res) => {
             nombre: user.nombre,
             apellido: user.apellido,
             correo: user.correo,
-            celular: user.celular
+            celular: user.celular,
+            rol: user.rol
         });
     }
     catch (error) {

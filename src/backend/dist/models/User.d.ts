@@ -7,6 +7,7 @@ export interface IUser extends Document {
     correo: string;
     celular: string;
     activo: boolean;
+    rol: 'admin' | 'kinesiologo';
 }
 export declare const User: mongoose.Model<IUser, {}, {}, {}, mongoose.Document<unknown, {}, IUser, {}, {}> & IUser & Required<{
     _id: mongoose.Types.ObjectId;

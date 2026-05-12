@@ -10,6 +10,9 @@ const db_js_1 = __importDefault(require("./config/db.js"));
 const auth_js_1 = __importDefault(require("./routes/auth.js"));
 const pacientes_js_1 = __importDefault(require("./routes/pacientes.js"));
 const evoluciones_js_1 = __importDefault(require("./routes/evoluciones.js"));
+const usuarios_js_1 = __importDefault(require("./routes/usuarios.js"));
+const stats_js_1 = __importDefault(require("./routes/stats.js"));
+const reportes_js_1 = __importDefault(require("./routes/reportes.js"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3001;
@@ -22,6 +25,9 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', auth_js_1.default);
 app.use('/api/pacientes', pacientes_js_1.default);
 app.use('/api/evoluciones', evoluciones_js_1.default);
+app.use('/api/usuarios', usuarios_js_1.default);
+app.use('/api/stats', stats_js_1.default);
+app.use('/api/reportes', reportes_js_1.default);
 app.listen(PORT, () => {
     console.log(`KinesIA Backend running on port ${PORT}`);
 });

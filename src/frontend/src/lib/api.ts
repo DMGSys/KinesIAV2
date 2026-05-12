@@ -29,7 +29,17 @@ api.interceptors.response.use(
   }
 );
 
-export const setAuth = (token: string, user: object) => {
+export interface AuthUser {
+  id: string;
+  usuario: string;
+  nombre: string;
+  apellido: string;
+  correo: string;
+  celular: string;
+  rol?: string;
+}
+
+export const setAuth = (token: string, user: AuthUser) => {
   localStorage.setItem('kinesia_token', token);
   localStorage.setItem('kinesia_user', JSON.stringify(user));
 };
@@ -39,7 +49,7 @@ export const clearAuth = () => {
   localStorage.removeItem('kinesia_user');
 };
 
-export const getAuth = () => {
+export const getAuth = (): { token: string; user: AuthUser } | null => {
   const token = localStorage.getItem('kinesia_token');
   const userStr = localStorage.getItem('kinesia_user');
   if (!token || !userStr) return null;
@@ -47,6 +57,13 @@ export const getAuth = () => {
 };
 
 export const authHeader = () => {
+  const token = localStorage.getItem('kinesia_token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
+export const getToken = () => localStorage.getItem('kinesia_token');
+
+export const authHeaderForPDF = () => {
   const token = localStorage.getItem('kinesia_token');
   return token ? { Authorization: `Bearer ${token}` } : {};
 };

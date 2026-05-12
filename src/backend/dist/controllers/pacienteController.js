@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getPacienteDemo = exports.updatePaciente = exports.createPaciente = exports.getPacienteById = exports.getPacientes = void 0;
 const Paciente_js_1 = require("../models/Paciente.js");
+const Counter_js_1 = require("../models/Counter.js");
 const getPacientes = async (req, res) => {
     try {
         const userId = req.user?.id;
@@ -32,9 +33,17 @@ exports.getPacienteById = getPacienteById;
 const createPaciente = async (req, res) => {
     try {
         const userId = req.user?.id;
-        const paciente = new Paciente_js_1.Paciente({ ...req.body, usuarioId: userId });
-        await paciente.save();
-        res.status(201).json(paciente);
+        const autoId = req.body.id === undefined || req.body.id === null || req.body.id === '';
+        if (autoId) {
+            const paciente = new Paciente_js_1.Paciente({ ...req.body, id: await (0, Counter_js_1.getNextSequence)('pacientes'), usuarioId: userId });
+            await paciente.save();
+            res.status(201).json(paciente);
+        }
+        else {
+            const paciente = new Paciente_js_1.Paciente({ ...req.body, usuarioId: userId });
+            await paciente.save();
+            res.status(201).json(paciente);
+        }
     }
     catch (error) {
         res.status(500).json({ message: 'Error en el servidor' });

@@ -22,10 +22,10 @@ const authMiddleware = (req, res, next) => {
     }
 };
 exports.authMiddleware = authMiddleware;
-const generateToken = (id, usuario) => {
+const generateToken = (id, usuario, rol) => {
     const secret = process.env.JWT_SECRET || 'kinesia-secret-key-2026';
     const options = { expiresIn: '5m' };
-    return jsonwebtoken_1.default.sign({ id, usuario }, secret, options);
+    return jsonwebtoken_1.default.sign({ id, usuario, rol }, secret, options);
 };
 exports.generateToken = generateToken;
 //# sourceMappingURL=auth.js.map

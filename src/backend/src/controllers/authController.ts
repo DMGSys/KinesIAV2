@@ -1,11 +1,19 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { User } from '../models/User.js';
-import { generateToken, AuthRequest } from '../middleware/auth.js';
+import { generateToken } from '../middleware/auth.js';
+
+export interface AuthRequest extends Request {
+  user?: {
+    id: string;
+    usuario: string;
+    rol?: string;
+  };
+}
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { usuario, contrasena, nombre, apellido, correo, celular } = req.body;
+    const { usuario, contrasena, nombre, apellido, correo, celular, rol } = req.body;
 
     if (!usuario || !contrasena || !nombre || !apellido || !correo || !celular) {
       res.status(400).json({ message: 'Todos los campos son requeridos' });
@@ -30,7 +38,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       apellido,
       correo,
       celular,
-      activo: true
+      activo: true,
+      rol: rol || 'kinesiologo'
     });
 
     await user.save();
@@ -64,7 +73,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const token = generateToken(user._id.toString(), user.usuario);
+    const token = generateToken(user._id.toString(), user.usuario, user.rol);
 
     res.json({
       token,
@@ -74,7 +83,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         nombre: user.nombre,
         apellido: user.apellido,
         correo: user.correo,
-        celular: user.celular
+        celular: user.celular,
+        rol: user.rol
       }
     });
   } catch (error) {
@@ -102,7 +112,8 @@ export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
       nombre: user.nombre,
       apellido: user.apellido,
       correo: user.correo,
-      celular: user.celular
+      celular: user.celular,
+      rol: user.rol
     });
   } catch (error) {
     res.status(500).json({ message: 'Error en el servidor' });

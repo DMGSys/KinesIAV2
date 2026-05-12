@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api, clearAuth } from '../lib/api';
+import { api, clearAuth, getAuth } from '../lib/api';
 
 interface Paciente {
   id: string;
@@ -43,12 +43,11 @@ export default function DashboardPage() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const payload = {
-        ...newPaciente,
-        edad: parseInt(newPaciente.edad) || 0,
-        sesionesTotales: parseInt(newPaciente.sesionesTotales) || 0,
-        sesionesRealizadas: 0,
-      };
+      const payload: Record<string, unknown> = { ...newPaciente };
+      if (payload.id === '') delete payload.id;
+      payload.edad = parseInt(newPaciente.edad as unknown as string) || 0;
+      payload.sesionesTotales = parseInt(newPaciente.sesionesTotales as unknown as string) || 0;
+      payload.sesionesRealizadas = 0;
       await api.post('/api/pacientes', payload);
       setShowForm(false);
       setNewPaciente({ id: '', nombre: '', edad: '', dni: '', telefono: '', email: '', obraSocial: '', nroAfiliado: '', diagnostico: '', medicoDerivante: '', fechaIngreso: '', sesionesTotales: '', antecedentes: '', alergias: '', medicacion: '' });
@@ -63,6 +62,29 @@ export default function DashboardPage() {
     navigate('/login');
   };
 
+  const isAdmin = getAuth()?.user?.rol === 'admin';
+
+  const handleExportPDF = async (pacienteId: string) => {
+    try {
+      const token = localStorage.getItem('kinesia_token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/reportes/paciente/${pacienteId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Error');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `historia-clinica-${pacienteId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      alert('Error al generar el PDF');
+    }
+  };
+
   const filtered = pacientes.filter(p =>
     p.nombre.toLowerCase().includes(search.toLowerCase())
   );
@@ -71,7 +93,14 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-slate-50">
       <header className="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-primary">KinesIA</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-bold text-primary">KinesIA</h1>
+            {isAdmin && (
+              <button onClick={() => navigate('/admin')} className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full hover:bg-purple-200 transition-colors">
+                Panel Admin
+              </button>
+            )}
+          </div>
           <button onClick={handleLogout} className="btn-secondary text-sm">
             Cerrar sesión
           </button>
@@ -82,7 +111,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-semibold text-slate-800">Mis Pacientes</h2>
-            <p className="text-slate-500 text-sm">{pacientes.length} paciente{pacientes.length !== 1 ? 's' : ''} registrad{pacientes.length !== 1 ? 'os' : 'o'}</p>
+            <p className="text-slate-500 text-sm">{pacientes.length} paciente{pacientes.length !== 1 ? 's' : ''}</p>
           </div>
           <button onClick={() => setShowForm(true)} className="btn-primary text-sm">
             + Agregar paciente
@@ -126,10 +155,22 @@ export default function DashboardPage() {
                 >
                   <div className="flex items-start justify-between">
                     <div>
-                      <h3 className="font-semibold text-slate-800">{paciente.nombre}</h3>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded font-mono">{paciente.id}</span>
+                        <h3 className="font-semibold text-slate-800">{paciente.nombre}</h3>
+                      </div>
                       <p className="text-sm text-slate-500">{paciente.edad} años · {paciente.diagnostico?.slice(0, 50)}{paciente.diagnostico && paciente.diagnostico.length > 50 ? '...' : ''}</p>
                     </div>
-                    <span className="text-sm text-slate-400">{paciente.sesionesRealizadas}/{paciente.sesionesTotales}</span>
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="text-sm text-slate-400">{paciente.sesionesRealizadas}/{paciente.sesionesTotales}</span>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleExportPDF(paciente.id); }}
+                        className="text-slate-400 hover:text-primary transition-colors text-xs"
+                        title="Exportar PDF"
+                      >
+                        📄 PDF
+                      </button>
+                    </div>
                   </div>
                   <div className="mt-3">
                     <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -152,17 +193,10 @@ export default function DashboardPage() {
           <div className="card w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold text-slate-800 mb-4">Nuevo Paciente</h3>
             <form onSubmit={handleCreate} className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label">ID Paciente</label>
-                  <input type="text" className="input-field" value={newPaciente.id}
-                    onChange={(e) => setNewPaciente({ ...newPaciente, id: e.target.value })} required />
-                </div>
-                <div>
-                  <label className="label">Nombre completo</label>
-                  <input type="text" className="input-field" value={newPaciente.nombre}
-                    onChange={(e) => setNewPaciente({ ...newPaciente, nombre: e.target.value })} required />
-                </div>
+              <div>
+                <label className="label">Nombre completo</label>
+                <input type="text" className="input-field" value={newPaciente.nombre}
+                  onChange={(e) => setNewPaciente({ ...newPaciente, nombre: e.target.value })} required />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -204,8 +238,8 @@ export default function DashboardPage() {
                   onChange={(e) => setNewPaciente({ ...newPaciente, medicoDerivante: e.target.value })} />
               </div>
               <div>
-                <label className="label">Fecha de ingreso</label>
-                <input type="text" className="input-field" placeholder="DD/MM/YYYY" value={newPaciente.fechaIngreso}
+                <label className="label">Fecha de ingreso (DD/MM/YYYY)</label>
+                <input type="text" className="input-field" value={newPaciente.fechaIngreso}
                   onChange={(e) => setNewPaciente({ ...newPaciente, fechaIngreso: e.target.value })} required />
               </div>
               <div>

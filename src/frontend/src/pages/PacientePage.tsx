@@ -159,6 +159,28 @@ export default function PacientePage() {
     }
   };
 
+  const handleExportPDF = async () => {
+    if (!id) return;
+    try {
+      const token = localStorage.getItem('kinesia_token');
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/reportes/paciente/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Error');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `historia-clinica-${id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      alert('Error al generar el PDF');
+    }
+  };
+
   const handleDescartar = () => {
     setTranscripcion('');
     setRecState('idle');
@@ -200,6 +222,13 @@ export default function PacientePage() {
           <div className="flex-1">
             <h1 className="text-lg font-semibold text-slate-800 truncate">{paciente.nombre}</h1>
           </div>
+          <button
+            onClick={handleExportPDF}
+            className="text-sm text-primary border border-primary px-3 py-1 rounded-lg hover:bg-teal-50 transition-colors flex items-center gap-1"
+            title="Exportar historia clínica en PDF"
+          >
+            📄 PDF
+          </button>
         </div>
         <nav className="max-w-2xl mx-auto px-4 flex border-t border-slate-100">
           {(['ficha', 'evoluciones', 'nueva'] as Tab[]).map((t) => (

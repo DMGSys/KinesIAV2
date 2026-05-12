@@ -27,9 +27,12 @@
 ## Características
 
 - **Sistema de autenticación** completo con JWT (registro, login, recuperación de contraseña)
-- **Gestión de pacientes** — CRUD completo con datos demográficos y clínicos
+- **Roles de usuario** — Administrador y Kinesiólogo
+- **Gestión de pacientes** — CRUD completo con ID auto-generado secuencial
 - **Historial de evoluciones** — notas cronológicas por paciente
 - **Grabadora de voz con IA** — transcripción de notas por voz (demo con textos pregenerados)
+- **Panel de administración** — stats, gestión de usuarios, activar/desactivar
+- **Exportación PDF** — historia clínica completa del paciente
 - **Diseño clínico responsive** — estilo mobile-first con paleta teal/slate
 - **Contenedores Docker** — orquestación lista para producción
 
@@ -137,11 +140,25 @@ KinesIA2/
     │       ├── controllers/
     │       │   ├── authController.ts
     │       │   ├── pacienteController.ts
-    │       │   └── evolucionController.ts
+    │       │   ├── evolucionController.ts
+    │       │   ├── userController.ts
+    │       │   ├── statsController.ts
+    │       │   └── pdfController.ts
+    │       ├── middleware/
+    │       │   ├── auth.ts
+    │       │   └── adminMiddleware.ts
+    │       ├── models/
+    │       │   ├── User.ts
+    │       │   ├── Paciente.ts
+    │       │   ├── Evolucion.ts
+    │       │   └── Counter.ts
     │       └── routes/
     │           ├── auth.ts
     │           ├── pacientes.ts
-    │           └── evoluciones.ts
+    │           ├── evoluciones.ts
+    │           ├── usuarios.ts
+    │           ├── stats.ts
+    │           └── reportes.ts
     │
     └── frontend/
         ├── .env.example       # Variables frontend
@@ -185,7 +202,7 @@ KinesIA2/
 |--------|----------|-------------|------|
 | GET | `/api/pacientes` | Lista todos los pacientes del usuario | JWT |
 | GET | `/api/pacientes/:id` | Detalle de un paciente | JWT |
-| POST | `/api/pacientes` | Crear paciente | JWT |
+| POST | `/api/pacientes` | Crear paciente (ID auto-generado si se omite) | JWT |
 | PUT | `/api/pacientes/:id` | Actualizar paciente | JWT |
 
 ### Evoluciones
@@ -195,6 +212,28 @@ KinesIA2/
 | GET | `/api/evoluciones` | Lista evoluciones (filtrable por `?pacienteId=`) | JWT |
 | POST | `/api/evoluciones` | Crear evolución | JWT |
 | GET | `/api/evoluciones/next/:pacienteId` | Obtener siguiente número de sesión | JWT |
+
+### Usuarios (solo admin)
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/usuarios` | Lista todos los usuarios | JWT + Admin |
+| POST | `/api/usuarios` | Crear usuario (kinesiólogo o admin) | JWT + Admin |
+| PUT | `/api/usuarios/:id` | Actualizar usuario | JWT + Admin |
+| PATCH | `/api/usuarios/:id/toggle` | Activar/desactivar usuario | JWT + Admin |
+| DELETE | `/api/usuarios/:id` | Eliminar usuario | JWT + Admin |
+
+### Reportes
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/reportes/paciente/:id` | Genera PDF con historia clínica completa | JWT |
+
+### Estadísticas (solo admin)
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| GET | `/api/stats` | Stats generales: pacientes, kinesiólogos, evoluciones, sesiones | JWT |
 
 ### Sistema
 
@@ -404,10 +443,11 @@ cd src/backend && npm install && npm run build
 
 - [ ] Transcripción real con **Claude API** (audio → texto estructurado)
 - [ ] **Búsqueda avanzada** de pacientes
-- [ ] **Export PDF** de evoluciones / historia clínica
+- [x] **Export PDF** de evoluciones / historia clínica ✅
 - [ ] **Dashboard de métricas** — evolución EVA, adherencia al tratamiento
 - [ ] **Plan de tratamiento** vinculado a evoluciones
-- [ ] **Múltiples kinesiólogos** por consultorio
+- [x] **Múltiples kinesiólogos** por consultorio (roles admin/kinesiologo) ✅
+- [x] **Panel de administración** con stats y gestión de usuarios ✅
 - [ ] **Alertas y recordatorios** de sesiones
 - [ ] **Firma digital** del profesional
 - [ ] **Integración con WhatsApp** para comunicación con paciente
@@ -473,3 +513,4 @@ The sample command uses `"."` as exposed path. For safer usage, replace it with 
 [MIT License](https://opensource.org/licenses/MIT)
 
 Desarrollado por **Diego Gatica** — 2026
+

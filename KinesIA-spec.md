@@ -1,6 +1,6 @@
 # KinesIA — Product Specification (Unified)
 
-**Versión:** 1.0.0  
+**Versión:** 1.1.0  
 **Fecha:** Mayo 2026  
 **Estado:** En Desarrollo  
 **Stack:** React + Vite · TypeScript · Tailwind CSS · Node.js/Express · MongoDB · Docker Compose
@@ -19,8 +19,10 @@ KinesIA es una aplicación web de gestión clínica para consultorios de kinesio
 |------|------------|
 | Frontend | React 18 + Vite + TypeScript + Tailwind CSS |
 | Backend | Node.js + Express + TypeScript |
-| Base de datos | MongoDB (Mongoose) |
+| Base de datos | MongoDB (Mongoose 8) |
 | Auth | JWT (5 min de expiración) + bcrypt (10 rounds) |
+| Roles | admin / kinesiologo |
+| PDF | PDFKit |
 | Contenedores | Docker Compose (frontend, backend, mongodb, nginx) |
 | Navegación | React Router DOM v6 |
 
@@ -54,6 +56,15 @@ interface IUser {
   correo: string;       // Unique
   celular: string;
   activo: boolean;      // Default: true
+  rol: 'admin' | 'kinesiologo';  // Default: kinesiologo
+}
+```
+
+### Counter (auto-increment)
+```typescript
+interface ICounter {
+  key: string;    // e.g. "pacientes"
+  seq: number;     // último número usado
 }
 ```
 
@@ -124,10 +135,12 @@ interface IEvolucion {
 - Redirect a `/dashboard` si ya está autenticado
 
 ### DashboardPage (`/dashboard`)
-- Header con logo + botón cerrar sesión
+- Header con logo + "Panel Admin" (solo si rol=admin) + botón cerrar sesión
+- ID auto del paciente visible en cada card
+- Botón 📄 PDF en cada card de paciente
 - Lista de pacientes con barra de progreso
 - Búsqueda por nombre
-- Botón "Agregar paciente" → modal con formulario completo
+- Botón "Agregar paciente" → modal (ID se auto-genera si se omite)
 - Click en paciente → navigate a `/paciente/:id`
 
 ### PacientePage (`/paciente/:id`) — 3 tabs
@@ -137,6 +150,7 @@ interface IEvolucion {
 - Diagnóstico destacado (bg amber)
 - Progreso de sesiones con barra visual
 - Información clínica (alergias, medicación, antecedentes)
+- Botón 📄 Exportar PDF en header
 
 **Tab 📋 Evoluciones:**
 - Historial cronológico inverso
@@ -152,6 +166,18 @@ interface IEvolucion {
 - Textarea editable con transcripción
 - Confirmar → guarda evolución + navega a tab "Evoluciones"
 - Descartar → vuelve a idle
+
+### AdminPage (`/admin`) — solo rol=admin
+**Tab 📊 Estadísticas:**
+- Cards: total pacientes, total evoluciones, total kinesiólogos, sesiones completadas
+- Lista de pacientes recientes con botón PDF
+- Lista de últimas evoluciones
+
+**Tab 👥 Usuarios:**
+- Crear usuario (nombre, apellido, correo, celular, usuario, contraseña, rol)
+- Lista de usuarios con badge de rol (Admin/Kinesiólogo)
+- Botón activar/desactivar usuario
+- Toggle de rol via actualizar
 
 ---
 

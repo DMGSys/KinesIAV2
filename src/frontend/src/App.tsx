@@ -3,11 +3,23 @@ import { getAuth } from './lib/api';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import PacientePage from './pages/PacientePage';
+import AdminPage from './pages/AdminPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const auth = getAuth();
   if (!auth) {
     return <Navigate to="/login" replace />;
+  }
+  return <>{children}</>;
+}
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const auth = getAuth();
+  if (!auth) {
+    return <Navigate to="/login" replace />;
+  }
+  if (auth.user.rol !== 'admin') {
+    return <Navigate to="/dashboard" replace />;
   }
   return <>{children}</>;
 }
@@ -31,6 +43,14 @@ export default function App() {
             <ProtectedRoute>
               <PacientePage />
             </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminPage />
+            </AdminRoute>
           }
         />
         <Route path="/" element={<Navigate to="/login" replace />} />
