@@ -66,6 +66,8 @@ export default function PacientePage() {
   const [newEntryContent, setNewEntryContent] = useState('');
   const [newEntryDate, setNewEntryDate] = useState('');
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
+  const [editClinica, setEditClinica] = useState(false);
+  const [clinicaForm, setClinicaForm] = useState({ alergias: '', medicacion: '', antecedentes: '' });
 
   useEffect(() => {
     loadData();
@@ -241,6 +243,17 @@ export default function PacientePage() {
     }
   };
 
+  const handleSaveClinica = async () => {
+    if (!id) return;
+    try {
+      const res = await api.put(`/api/pacientes/${id}`, clinicaForm);
+      setPaciente(prev => prev ? { ...prev, ...res.data } : prev);
+      setEditClinica(false);
+    } catch {
+      alert('Error al guardar información clínica');
+    }
+  };
+
   const handleExportPDF = async () => {
     if (!id || pdfLoading) return;
     setPdfLoading(true);
@@ -399,40 +412,53 @@ export default function PacientePage() {
               </div>
             </div>
 
-            {(paciente.alergias || paciente.medicacion || paciente.antecedentes) && (
-              <div className="card">
-                <h3 className="font-semibold text-slate-700 mb-3">Información clínica</h3>
-                <div className="space-y-2 text-sm">
-                  {paciente.alergias && (
-                    <div className="flex items-start gap-2">
-                      <span className="text-red-500">⚠️</span>
-                      <div>
-                        <span className="text-slate-500">Alergias: </span>
-                        <span className="text-slate-700">{paciente.alergias}</span>
-                      </div>
-                    </div>
-                  )}
-                  {paciente.medicacion && (
-                    <div className="flex items-start gap-2">
-                      <span className="text-blue-500">💊</span>
-                      <div>
-                        <span className="text-slate-500">Medicación: </span>
-                        <span className="text-slate-700">{paciente.medicacion}</span>
-                      </div>
-                    </div>
-                  )}
-                  {paciente.antecedentes && (
-                    <div className="flex items-start gap-2">
-                      <span className="text-slate-500">📋</span>
-                      <div>
-                        <span className="text-slate-500">Antecedentes: </span>
-                        <span className="text-slate-700">{paciente.antecedentes}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
+            <div className="card">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-slate-700">Información clínica</h3>
+                {!editClinica && (
+                  <button onClick={() => { setClinicaForm({ alergias: paciente.alergias || '', medicacion: paciente.medicacion || '', antecedentes: paciente.antecedentes || '' }); setEditClinica(true); }}
+                    className="text-xs text-slate-400 hover:text-primary transition-colors" title="Editar">✏️</button>
+                )}
               </div>
-            )}
+              {editClinica ? (
+                <div className="space-y-3">
+                  <div>
+                    <label className="label text-xs">⚠️ Alergias</label>
+                    <input type="text" className="input-field" value={clinicaForm.alergias}
+                      onChange={e => setClinicaForm({ ...clinicaForm, alergias: e.target.value })} placeholder="Ninguna" />
+                  </div>
+                  <div>
+                    <label className="label text-xs">💊 Medicación</label>
+                    <input type="text" className="input-field" value={clinicaForm.medicacion}
+                      onChange={e => setClinicaForm({ ...clinicaForm, medicacion: e.target.value })} placeholder="Ninguna" />
+                  </div>
+                  <div>
+                    <label className="label text-xs">📋 Antecedentes</label>
+                    <textarea className="input-field min-h-[60px]" value={clinicaForm.antecedentes}
+                      onChange={e => setClinicaForm({ ...clinicaForm, antecedentes: e.target.value })} placeholder="Ninguno" />
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={handleSaveClinica} className="btn-primary text-xs px-3 py-1">Guardar</button>
+                    <button onClick={() => setEditClinica(false)} className="btn-secondary text-xs px-3 py-1">Cancelar</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-start gap-2">
+                    <span className="text-red-500">⚠️</span>
+                    <div><span className="text-slate-500">Alergias: </span><span className="text-slate-700">{paciente.alergias || '—'}</span></div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-blue-500">💊</span>
+                    <div><span className="text-slate-500">Medicación: </span><span className="text-slate-700">{paciente.medicacion || '—'}</span></div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-slate-500">📋</span>
+                    <div><span className="text-slate-500">Antecedentes: </span><span className="text-slate-700">{paciente.antecedentes || '—'}</span></div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
