@@ -1,6 +1,6 @@
 # KinesIA — Product Specification (Unified)
 
-**Versión:** 1.1.0  
+**Versión:** 1.2.0  
 **Fecha:** Mayo 2026  
 **Estado:** En Desarrollo  
 **Stack:** React + Vite · TypeScript · Tailwind CSS · Node.js/Express · MongoDB · Docker Compose
@@ -21,7 +21,7 @@ KinesIA es una aplicación web de gestión clínica para consultorios de kinesio
 | Backend | Node.js + Express + TypeScript |
 | Base de datos | MongoDB (Mongoose 8) |
 | Auth | JWT (5 min de expiración) + bcrypt (10 rounds) |
-| Roles | admin / kinesiologo |
+| Roles | admin, kinesiologo, secretario (múltiples por usuario) |
 | PDF | PDFKit |
 | Contenedores | Docker Compose (frontend, backend, mongodb, nginx) |
 | Navegación | React Router DOM v6 |
@@ -49,14 +49,14 @@ KinesIA es una aplicación web de gestión clínica para consultorios de kinesio
 ### User
 ```typescript
 interface IUser {
-  usuario: string;     // Unique
-  contrasena: string;   // bcrypt hashed
+  usuario: string;       // Unique
+  contrasena: string;     // bcrypt hashed
   nombre: string;
   apellido: string;
-  correo: string;       // Unique
+  correo: string;         // Unique
   celular: string;
-  activo: boolean;      // Default: true
-  rol: 'admin' | 'kinesiologo';  // Default: kinesiologo
+  activo: boolean;        // Default: true
+  roles: ('admin' | 'kinesiologo' | 'secretario')[];  // Default: ['kinesiologo']
 }
 ```
 
@@ -110,8 +110,8 @@ interface IEvolucion {
 
 | Endpoint | Método | Descripción | Auth |
 |----------|--------|-------------|------|
-| `/api/auth/register` | POST | Registro completo | No |
-| `/api/auth/login` | POST | Login | No |
+| `/api/auth/register` | POST | Registro completo (soporta `roles[]`) | No |
+| `/api/auth/login` | POST | Login (retorna `roles[]`) | No |
 | `/api/auth/recover` | POST | Recuperar contraseña | No |
 | `/api/auth/me` | GET | Datos del usuario | JWT |
 | `/api/health` | GET | Health check | No |
@@ -122,6 +122,13 @@ interface IEvolucion {
 | `/api/evoluciones` | GET | Lista evoluciones (filterable por pacienteId) | JWT |
 | `/api/evoluciones` | POST | Crear evolución | JWT |
 | `/api/evoluciones/next/:pacienteId` | GET | Siguiente número de sesión | JWT |
+| `/api/usuarios` | GET | Lista todos los usuarios | JWT + Admin |
+| `/api/usuarios` | POST | Crear usuario (soporta `roles[]`) | JWT + Admin |
+| `/api/usuarios/:id` | PUT | Actualizar usuario | JWT + Admin |
+| `/api/usuarios/:id` | DELETE | Eliminar usuario | JWT + Admin |
+| `/api/usuarios/:id/toggle` | PATCH | Activar/desactivar usuario | JWT + Admin |
+| `/api/usuarios/:id/roles` | PATCH | Actualizar roles de usuario | JWT + Admin |
+| `/api/stats` | GET | Estadísticas del dashboard admin | JWT + Admin |
 
 ---
 
@@ -135,9 +142,12 @@ interface IEvolucion {
 - Redirect a `/dashboard` si ya está autenticado
 
 ### DashboardPage (`/dashboard`)
-- Header con logo + "Panel Admin" (solo si rol=admin) + botón cerrar sesión
+- Header con logo + "Panel Admin" (solo si `roles.includes('admin')`) + botón cerrar sesión
+- Bienvenida con nombre completo del usuario + badges de roles (Admin, Kinesiólogo, Secretario/a)
+- Loading state con spinner, error state con "Reintentar"
+- Botón "Crear paciente" con guard `creating` + spinner inline + `disabled`
 - ID auto del paciente visible en cada card
-- Botón 📄 PDF en cada card de paciente
+- Botón 📄 PDF en cada card de paciente con guard per-item (`pdfLoading === pacienteId`) + spinner
 - Lista de pacientes con barra de progreso
 - Búsqueda por nombre
 - Botón "Agregar paciente" → modal (ID se auto-genera si se omite)
@@ -167,17 +177,18 @@ interface IEvolucion {
 - Confirmar → guarda evolución + navega a tab "Evoluciones"
 - Descartar → vuelve a idle
 
-### AdminPage (`/admin`) — solo rol=admin
+### AdminPage (`/admin`) — solo `roles.includes('admin')`
 **Tab 📊 Estadísticas:**
 - Cards: total pacientes, total evoluciones, total kinesiólogos, sesiones completadas
-- Lista de pacientes recientes con botón PDF
+- Lista de pacientes recientes con botón PDF (guard per-item)
 - Lista de últimas evoluciones
 
 **Tab 👥 Usuarios:**
-- Crear usuario (nombre, apellido, correo, celular, usuario, contraseña, rol)
-- Lista de usuarios con badge de rol (Admin/Kinesiólogo)
-- Botón activar/desactivar usuario
-- Toggle de rol via actualizar
+- Crear usuario (nombre, apellido, correo, celular, usuario, contraseña, roles mediante checkboxes)
+- Lista de usuarios con badges de todos sus roles (Admin 🟣, Kinesiólogo 🔵, Secretario/a 🟠)
+- Botón activar/desactivar usuario con guard per-item `toggling`
+- Botón ✏️ para editar roles inline con checkboxes + guardar/cancelar
+- Loading states: `creatingUser` con spinner en botón de crear
 
 ---
 
@@ -223,12 +234,30 @@ KinesIA2/
     │   ├── package.json
     │   ├── tsconfig.json
     │   └── src/
-    │       ├── index.ts
+    │       ├── index.ts                          # migración rol→roles al startup
     │       ├── config/db.ts
-    │       ├── middleware/auth.ts
-    │       ├── models/{User,Paciente,Evolucion}.ts
-    │       ├── controllers/{auth,paciente,evolucion}Controller.ts
-    │       └── routes/{auth,pacientes,evoluciones}.ts
+    │       ├── middleware/
+    │       │   ├── auth.ts                       # JWT con roles[]
+    │       │   └── adminMiddleware.ts             # verifica roles.includes('admin')
+    │       ├── models/
+    │       │   ├── User.ts                       # roles: string[] (admin,kinesiologo,secretario)
+    │       │   ├── Paciente.ts
+    │       │   ├── Evolucion.ts
+    │       │   └── Counter.ts
+    │       ├── controllers/
+    │       │   ├── authController.ts             # register/login retornan roles[]
+    │       │   ├── pacienteController.ts
+    │       │   ├── evolucionController.ts
+    │       │   ├── userController.ts             # CRUD + updateUserRoles
+    │       │   ├── statsController.ts
+    │       │   └── reportesController.ts
+    │       └── routes/
+    │           ├── auth.ts
+    │           ├── pacientes.ts
+    │           ├── evoluciones.ts
+    │           ├── usuarios.ts                   # incluye PATCH /:id/roles
+    │           ├── stats.ts
+    │           └── reportes.ts
     └── frontend/
         ├── .env.example
         ├── Dockerfile
@@ -241,21 +270,28 @@ KinesIA2/
         ├── tsconfig.json
         └── src/
             ├── main.tsx
-            ├── App.tsx
+            ├── App.tsx                           # AdminRoute chequea roles.includes('admin')
             ├── index.css
-            ├── lib/api.ts
+            ├── lib/api.ts                        # AuthUser.roles: string[]
+            ├── components/                       # (futuro)
             └── pages/
                 ├── LoginPage.tsx
-                ├── DashboardPage.tsx
-                └── PacientePage.tsx
+                ├── DashboardPage.tsx             # bienvenida + badges de roles
+                ├── PacientePage.tsx
+                └── AdminPage.tsx                 # checkboxes multi-rol + editor inline
 ```
 
 ---
 
 ## 10. Roadmap
 
-- [ ] Transcripción real con Claude API (audio → texto)
-- [ ] Múltiples pacientes con búsqueda
-- [ ] Export de evoluciones a PDF
+- [ ] Transcripción real con Whisper API (audio → texto)
+- [x] Múltiples pacientes con búsqueda
+- [x] Export de historia clínica a PDF
+- [x] Roles múltiples (admin, kinesiologo, secretario) por usuario
+- [x] Panel de administración con estadísticas y gestión de usuarios
+- [x] Editor de roles inline en admin
+- [x] Bienvenida con nombre y roles en dashboard
+- [x] Loading states (spinners, guards, disabled) en CRUD y export
 - [ ] Plan de tratamiento vinculado
-- [ ] Dashboard de métricas
+- [ ] Dashboard de métricas avanzadas

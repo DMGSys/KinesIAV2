@@ -19,9 +19,15 @@ interface Usuario {
   apellido: string;
   correo: string;
   celular: string;
-  rol: 'admin' | 'kinesiologo';
+  roles: string[];
   activo: boolean;
 }
+
+const ALL_ROLES = [
+  { value: 'admin', label: 'Admin', color: 'bg-purple-100 text-purple-700' },
+  { value: 'kinesiologo', label: 'Kinesiólogo', color: 'bg-blue-100 text-blue-700' },
+  { value: 'secretario', label: 'Secretario/a', color: 'bg-amber-100 text-amber-700' },
+];
 
 type Tab = 'stats' | 'usuarios';
 
@@ -33,7 +39,9 @@ export default function AdminPage() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [newUser, setNewUser] = useState({ usuario: '', contrasena: '', nombre: '', apellido: '', correo: '', celular: '', rol: 'kinesiologo' as 'admin' | 'kinesiologo' });
+  const [newUser, setNewUser] = useState({ usuario: '', contrasena: '', nombre: '', apellido: '', correo: '', celular: '', roles: ['kinesiologo'] as string[] });
+  const [editingRoles, setEditingRoles] = useState<string | null>(null);
+  const [editRolesValue, setEditRolesValue] = useState<string[]>([]);
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
   const [toggling, setToggling] = useState<string | null>(null);
@@ -41,7 +49,7 @@ export default function AdminPage() {
   const [creatingUser, setCreatingUser] = useState(false);
 
   useEffect(() => {
-    if (!auth || auth.user.rol !== 'admin') {
+    if (!auth || !auth.user.roles.includes('admin')) {
       navigate('/dashboard');
       return;
     }
@@ -70,9 +78,9 @@ export default function AdminPage() {
     setFormSuccess('');
     setCreatingUser(true);
     try {
-      await api.post('/api/usuarios', newUser);
+      await api.post('/api/usuarios', { ...newUser, roles: newUser.roles });
       setFormSuccess('Usuario creado exitosamente');
-      setNewUser({ usuario: '', contrasena: '', nombre: '', apellido: '', correo: '', celular: '', rol: 'kinesiologo' });
+      setNewUser({ usuario: '', contrasena: '', nombre: '', apellido: '', correo: '', celular: '', roles: ['kinesiologo'] });
       setShowForm(false);
       loadData();
     } catch (err: any) {
@@ -125,7 +133,35 @@ export default function AdminPage() {
     }
   };
 
-  if (!auth || auth.user.rol !== 'admin') return null;
+  const handleSaveRoles = async (userId: string) => {
+    if (editRolesValue.length === 0) return;
+    try {
+      await api.patch(`/api/usuarios/${userId}/roles`, { roles: editRolesValue });
+      setEditingRoles(null);
+      loadData();
+    } catch {
+      alert('Error al actualizar roles');
+    }
+  };
+
+  const toggleRole = (role: string) => {
+    setNewUser(prev => ({
+      ...prev,
+      roles: prev.roles.includes(role)
+        ? prev.roles.filter(r => r !== role)
+        : [...prev.roles, role]
+    }));
+  };
+
+  const toggleEditRole = (role: string) => {
+    setEditRolesValue(prev =>
+      prev.includes(role)
+        ? prev.filter(r => r !== role)
+        : [...prev, role]
+    );
+  };
+
+  if (!auth || !auth.user.roles.includes('admin')) return null;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -261,12 +297,16 @@ export default function AdminPage() {
                             onChange={(e) => setNewUser({ ...newUser, contrasena: e.target.value })} required />
                         </div>
                         <div>
-                          <label className="label">Rol</label>
-                          <select className="input-field" value={newUser.rol}
-                            onChange={(e) => setNewUser({ ...newUser, rol: e.target.value as 'admin' | 'kinesiologo' })}>
-                            <option value="kinesiologo">Kinesiólogo</option>
-                            <option value="admin">Administrador</option>
-                          </select>
+                          <label className="label">Roles</label>
+                          <div className="space-y-1.5 mt-1">
+                            {ALL_ROLES.map(r => (
+                              <label key={r.value} className="flex items-center gap-2 text-sm cursor-pointer">
+                                <input type="checkbox" checked={newUser.roles.includes(r.value)}
+                                  onChange={() => toggleRole(r.value)} className="rounded border-slate-300" />
+                                <span className={`text-xs px-2 py-0.5 rounded ${r.color}`}>{r.label}</span>
+                              </label>
+                            ))}
+                          </div>
                         </div>
                       </div>
                       {formError && <p className="text-red-600 text-sm">{formError}</p>}
@@ -285,26 +325,54 @@ export default function AdminPage() {
 
                 <div className="space-y-2">
                   {usuarios.map((u) => (
-                    <div key={u._id} className="card py-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-slate-700">{u.nombre} {u.apellido}</p>
-                            <span className={`badge ${u.rol === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
-                              {u.rol === 'admin' ? 'Admin' : 'Kinesiólogo'}
-                            </span>
-                            {!u.activo && <span className="badge bg-red-100 text-red-700">Inactivo</span>}
+                    <div key={u._id} className="card py-3">
+                      {editingRoles === u._id ? (
+                        <div className="space-y-3">
+                          <p className="font-medium text-slate-700 text-sm">{u.nombre} {u.apellido}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {ALL_ROLES.map(r => (
+                              <label key={r.value} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                                <input type="checkbox" checked={editRolesValue.includes(r.value)}
+                                  onChange={() => toggleEditRole(r.value)} className="rounded border-slate-300" />
+                                <span className={`text-xs px-2 py-0.5 rounded ${r.color}`}>{r.label}</span>
+                              </label>
+                            ))}
                           </div>
-                          <p className="text-sm text-slate-400">@{u.usuario} · {u.correo}</p>
+                          <div className="flex gap-2">
+                            <button onClick={() => handleSaveRoles(u._id)} disabled={editRolesValue.length === 0} className="btn-primary text-xs px-3 py-1">Guardar</button>
+                            <button onClick={() => setEditingRoles(null)} className="btn-secondary text-xs px-3 py-1">Cancelar</button>
+                          </div>
                         </div>
-                        <button
-                          onClick={() => handleToggleActive(u._id, u.activo)}
-                          disabled={toggling === u._id}
-                          className={`text-xs px-3 py-1 rounded-full border transition-colors ${toggling === u._id ? 'border-slate-200 text-slate-400' : u.activo ? 'border-green-300 text-green-700 hover:bg-green-50' : 'border-red-300 text-red-700 hover:bg-red-50'}`}
-                        >
-                          {toggling === u._id ? '...' : (u.activo ? 'Desactivar' : 'Activar')}
-                        </button>
-                      </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="font-medium text-slate-700">{u.nombre} {u.apellido}</p>
+                              {ALL_ROLES.filter(r => u.roles.includes(r.value)).map(r => (
+                                <span key={r.value} className={`badge ${r.color}`}>{r.label}</span>
+                              ))}
+                              {!u.activo && <span className="badge bg-red-100 text-red-700">Inactivo</span>}
+                            </div>
+                            <p className="text-sm text-slate-400">@{u.usuario} · {u.correo}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => { setEditingRoles(u._id); setEditRolesValue([...u.roles]); }}
+                              className="text-xs text-slate-400 hover:text-primary transition-colors"
+                              title="Editar roles"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              onClick={() => handleToggleActive(u._id, u.activo)}
+                              disabled={toggling === u._id}
+                              className={`text-xs px-3 py-1 rounded-full border transition-colors ${toggling === u._id ? 'border-slate-200 text-slate-400' : u.activo ? 'border-green-300 text-green-700 hover:bg-green-50' : 'border-red-300 text-red-700 hover:bg-red-50'}`}
+                            >
+                              {toggling === u._id ? '...' : (u.activo ? 'Desactivar' : 'Activar')}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

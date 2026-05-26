@@ -70,7 +70,7 @@ export default function DashboardPage() {
     navigate('/login');
   };
 
-  const isAdmin = getAuth()?.user?.rol === 'admin';
+  const isAdmin = getAuth()?.user?.roles?.includes('admin');
 
   const handleExportPDF = async (pacienteId: string) => {
     if (pdfLoading === pacienteId) return;
@@ -120,6 +120,17 @@ export default function DashboardPage() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-6">
+        <div className="mb-6 pb-4 border-b border-slate-100">
+          <p className="text-sm text-slate-500">Bienvenido/a, <span className="font-semibold text-slate-700">{getAuth()?.user?.nombre} {getAuth()?.user?.apellido}</span></p>
+          <div className="flex gap-1.5 mt-1.5">
+            {getAuth()?.user?.roles?.map(r => {
+              const colors: Record<string, string> = { admin: 'bg-purple-100 text-purple-700', kinesiologo: 'bg-blue-100 text-blue-700', secretario: 'bg-amber-100 text-amber-700' };
+              const labels: Record<string, string> = { admin: 'Admin', kinesiologo: 'Kinesiólogo', secretario: 'Secretario/a' };
+              return <span key={r} className={`text-xs px-2 py-0.5 rounded ${colors[r] || 'bg-slate-100 text-slate-600'}`}>{labels[r] || r}</span>;
+            })}
+          </div>
+        </div>
+
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-semibold text-slate-800">Mis Pacientes</h2>

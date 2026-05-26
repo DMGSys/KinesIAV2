@@ -1,19 +1,13 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import { User } from '../models/User.js';
+import { User, ROLES } from '../models/User.js';
 import { generateToken } from '../middleware/auth.js';
 
-export interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    usuario: string;
-    rol?: string;
-  };
-}
+const VALID_ROLES = ROLES as readonly string[];
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { usuario, contrasena, nombre, apellido, correo, celular, rol } = req.body;
+    const { usuario, contrasena, nombre, apellido, correo, celular, roles } = req.body;
 
     if (!usuario || !contrasena || !nombre || !apellido || !correo || !celular) {
       res.status(400).json({ message: 'Todos los campos son requeridos' });
@@ -29,6 +23,10 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    const finalRoles = Array.isArray(roles) && roles.length > 0
+      ? roles.filter((r: string) => VALID_ROLES.includes(r))
+      : ['kinesiologo'];
+
     const hashedPassword = await bcrypt.hash(contrasena, 10);
 
     const user = new User({
@@ -39,7 +37,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       correo,
       celular,
       activo: true,
-      rol: rol || 'kinesiologo'
+      roles: finalRoles
     });
 
     await user.save();
@@ -73,7 +71,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const token = generateToken(user._id.toString(), user.usuario, user.rol);
+    const userRoles = user.roles?.length ? user.roles : [(user as any).rol || 'kinesiologo'];
+
+    const token = generateToken(user._id.toString(), user.usuario, userRoles);
 
     res.json({
       token,
@@ -84,7 +84,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         apellido: user.apellido,
         correo: user.correo,
         celular: user.celular,
-        rol: user.rol
+        roles: userRoles
       }
     });
   } catch (error) {
@@ -92,9 +92,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getMe = async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = req.user?.id;
+    const authReq = req as any;
+    const userId = authReq.user?.id;
     if (!userId) {
       res.status(401).json({ message: 'No autorizado' });
       return;
@@ -113,7 +114,7 @@ export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
       apellido: user.apellido,
       correo: user.correo,
       celular: user.celular,
-      rol: user.rol
+      roles: user.roles
     });
   } catch (error) {
     res.status(500).json({ message: 'Error en el servidor' });

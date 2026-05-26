@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import { User } from '../models/User.js';
+import { User, ROLES } from '../models/User.js';
 import { AuthRequest } from '../middleware/auth.js';
+
+const VALID_ROLES = ROLES as readonly string[];
 
 export const getUsers = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -27,16 +29,19 @@ export const getUserById = async (req: AuthRequest, res: Response): Promise<void
 
 export const createUser = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { usuario, contrasena, nombre, apellido, correo, celular, rol } = req.body;
+    const { usuario, contrasena, nombre, apellido, correo, celular, roles } = req.body;
 
     if (!usuario || !contrasena || !nombre || !apellido || !correo || !celular) {
       res.status(400).json({ message: 'Todos los campos son requeridos' });
       return;
     }
 
-    const validRoles = ['admin', 'kinesiologo'];
-    if (rol && !validRoles.includes(rol)) {
-      res.status(400).json({ message: 'Rol inválido. Use admin o kinesiologo.' });
+    const finalRoles = Array.isArray(roles) && roles.length > 0
+      ? roles.filter((r: string) => VALID_ROLES.includes(r))
+      : ['kinesiologo'];
+
+    if (finalRoles.length === 0) {
+      res.status(400).json({ message: 'Roles inválidos.' });
       return;
     }
 
@@ -56,12 +61,11 @@ export const createUser = async (req: AuthRequest, res: Response): Promise<void>
       correo,
       celular,
       activo: true,
-      rol: rol || 'kinesiologo'
+      roles: finalRoles
     });
 
     await user.save();
-    const userResponse = user.toObject();
-    const { contrasena: _removed, ...rest } = userResponse;
+    const { contrasena: _removed, ...rest } = user.toObject();
     res.status(201).json(rest);
   } catch (error) {
     res.status(500).json({ message: 'Error en el servidor' });
@@ -79,10 +83,13 @@ export const updateUser = async (req: AuthRequest, res: Response): Promise<void>
       delete updates.contrasena;
     }
 
-    const validRoles = ['admin', 'kinesiologo'];
-    if (updates.rol && !validRoles.includes(updates.rol as string)) {
-      res.status(400).json({ message: 'Rol inválido.' });
-      return;
+    if (updates.roles) {
+      const filtered = (updates.roles as string[]).filter(r => VALID_ROLES.includes(r));
+      if (filtered.length === 0) {
+        res.status(400).json({ message: 'Roles inválidos.' });
+        return;
+      }
+      updates.roles = filtered;
     }
 
     const user = await User.findByIdAndUpdate(id, updates, { new: true }).select('-contrasena');
@@ -118,9 +125,35 @@ export const toggleUserActive = async (req: AuthRequest, res: Response): Promise
     }
     user.activo = !user.activo;
     await user.save();
-    const userResponse = user.toObject();
-    const { contrasena: _removed, ...rest } = userResponse;
+    const { contrasena: _removed, ...rest } = user.toObject();
     res.json(rest);
+  } catch (error) {
+    res.status(500).json({ message: 'Error en el servidor' });
+  }
+};
+
+export const updateUserRoles = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { roles } = req.body;
+
+    if (!Array.isArray(roles) || roles.length === 0) {
+      res.status(400).json({ message: 'Se requiere al menos un rol' });
+      return;
+    }
+
+    const filtered = roles.filter((r: string) => VALID_ROLES.includes(r));
+    if (filtered.length === 0) {
+      res.status(400).json({ message: 'Roles inválidos' });
+      return;
+    }
+
+    const user = await User.findByIdAndUpdate(id, { roles: filtered }, { new: true }).select('-contrasena');
+    if (!user) {
+      res.status(404).json({ message: 'Usuario no encontrado' });
+      return;
+    }
+    res.json(user);
   } catch (error) {
     res.status(500).json({ message: 'Error en el servidor' });
   }

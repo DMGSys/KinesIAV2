@@ -5,7 +5,7 @@ export interface AuthRequest extends Request {
   user?: {
     id: string;
     usuario: string;
-    rol?: string;
+    roles: string[];
   };
 }
 
@@ -19,7 +19,7 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
 
   try {
     const secret = process.env.JWT_SECRET || 'kinesia-secret-key-2026';
-    const decoded = jwt.verify(token, secret) as { id: string; usuario: string; rol: string };
+    const decoded = jwt.verify(token, secret) as { id: string; usuario: string; roles: string[] };
     req.user = decoded;
     next();
   } catch (error) {
@@ -27,8 +27,8 @@ export const authMiddleware = (req: AuthRequest, res: Response, next: NextFuncti
   }
 };
 
-export const generateToken = (id: string, usuario: string, rol: string): string => {
+export const generateToken = (id: string, usuario: string, roles: string[]): string => {
   const secret = process.env.JWT_SECRET || 'kinesia-secret-key-2026';
   const options: SignOptions = { expiresIn: '5m' };
-  return jwt.sign({ id, usuario, rol }, secret, options);
+  return jwt.sign({ id, usuario, roles }, secret, options);
 };

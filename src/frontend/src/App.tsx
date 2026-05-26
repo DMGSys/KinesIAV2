@@ -18,7 +18,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   if (!auth) {
     return <Navigate to="/login" replace />;
   }
-  if (auth.user.rol !== 'admin') {
+  if (!auth.user.roles.includes('admin')) {
     return <Navigate to="/dashboard" replace />;
   }
   return <>{children}</>;

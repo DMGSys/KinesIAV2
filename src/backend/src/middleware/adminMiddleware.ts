@@ -12,14 +12,14 @@ export const adminMiddleware = (req: AuthRequest, res: Response, next: NextFunct
 
   try {
     const secret = process.env.JWT_SECRET || 'kinesia-secret-key-2026';
-    const decoded = jwt.verify(token, secret) as { id: string; usuario: string; rol: string };
+    const decoded = jwt.verify(token, secret) as { id: string; usuario: string; roles: string[] };
 
-    if (decoded.rol !== 'admin') {
+    if (!decoded.roles || !decoded.roles.includes('admin')) {
       res.status(403).json({ message: 'Acceso denegado. Se requiere rol de administrador.' });
       return;
     }
 
-    req.user = { id: decoded.id, usuario: decoded.usuario, rol: decoded.rol };
+    req.user = { id: decoded.id, usuario: decoded.usuario, roles: decoded.roles };
     next();
   } catch (error) {
     res.status(401).json({ message: 'Token inválido o expirado' });

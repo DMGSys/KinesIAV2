@@ -1,5 +1,8 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+export const ROLES = ['admin', 'kinesiologo', 'secretario'] as const;
+export type Rol = typeof ROLES[number];
+
 export interface IUser extends Document {
   usuario: string;
   contrasena: string;
@@ -8,7 +11,7 @@ export interface IUser extends Document {
   correo: string;
   celular: string;
   activo: boolean;
-  rol: 'admin' | 'kinesiologo';
+  roles: Rol[];
 }
 
 const userSchema = new Schema<IUser>({
@@ -19,7 +22,7 @@ const userSchema = new Schema<IUser>({
   correo: { type: String, required: true, unique: true },
   celular: { type: String, required: true },
   activo: { type: Boolean, default: true },
-  rol: { type: String, enum: ['admin', 'kinesiologo'], default: 'kinesiologo' }
+  roles: { type: [String], enum: ROLES, default: ['kinesiologo'] }
 });
 
 export const User = mongoose.model<IUser>('User', userSchema);

@@ -36,7 +36,7 @@ export interface AuthUser {
   apellido: string;
   correo: string;
   celular: string;
-  rol?: string;
+  roles: string[];
 }
 
 export const setAuth = (token: string, user: AuthUser) => {

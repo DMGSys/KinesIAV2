@@ -9,6 +9,7 @@ import usuarioRoutes from './routes/usuarios.js';
 import statsRoutes from './routes/stats.js';
 import reportesRoutes from './routes/reportes.js';
 import transcripcionRoutes from './routes/transcripcion.js';
+import { User } from './models/User.js';
 
 dotenv.config();
 
@@ -19,6 +20,22 @@ app.use(cors());
 app.use(express.json());
 
 connectDB();
+
+// Migrar usuarios con rol (string) → roles (array)
+setTimeout(async () => {
+  try {
+    const pending = await User.find({ roles: { $exists: false } }).lean();
+    for (const user of pending) {
+      const oldRol = (user as any).rol || 'kinesiologo';
+      await User.updateOne({ _id: user._id }, { $set: { roles: [oldRol] } });
+    }
+    if (pending.length > 0) {
+      console.log(`Migrados ${pending.length} usuarios: rol → roles`);
+    }
+  } catch (e) {
+    // migración silenciosa
+  }
+}, 1000);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'KinesIA API running' });

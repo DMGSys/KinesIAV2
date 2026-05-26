@@ -5,7 +5,8 @@ import {
   createUser,
   updateUser,
   deleteUser,
-  toggleUserActive
+  toggleUserActive,
+  updateUserRoles
 } from '../controllers/userController.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { adminMiddleware } from '../middleware/adminMiddleware.js';
@@ -21,5 +22,6 @@ router.post('/', createUser);
 router.put('/:id', updateUser);
 router.delete('/:id', deleteUser);
 router.patch('/:id/toggle', toggleUserActive);
+router.patch('/:id/roles', updateUserRoles);
 
 export default router;

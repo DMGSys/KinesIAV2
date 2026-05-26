@@ -9,8 +9,8 @@ export const getStats = async (req: AuthRequest, res: Response): Promise<void> =
     const userId = req.user?.id;
 
     const totalPacientes = await Paciente.countDocuments({ usuarioId: userId });
-    const totalKinesiologos = await User.countDocuments({ rol: 'kinesiologo' });
-    const totalAdmin = await User.countDocuments({ rol: 'admin' });
+    const totalKinesiologos = await User.countDocuments({ roles: 'kinesiologo' });
+    const totalAdmin = await User.countDocuments({ roles: 'admin' });
     const totalEvoluciones = await Evolucion.countDocuments({ usuarioId: userId });
 
     const pacientesRecientes = await Paciente.find({ usuarioId: userId })
