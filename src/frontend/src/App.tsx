@@ -4,6 +4,7 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import PacientePage from './pages/PacientePage';
 import AdminPage from './pages/AdminPage';
+import AgendaPage from './pages/AgendaPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const auth = getAuth();
@@ -51,6 +52,14 @@ export default function App() {
             <AdminRoute>
               <AdminPage />
             </AdminRoute>
+          }
+        />
+        <Route
+          path="/agenda"
+          element={
+            <ProtectedRoute>
+              <AgendaPage />
+            </ProtectedRoute>
           }
         />
         <Route path="/" element={<Navigate to="/login" replace />} />

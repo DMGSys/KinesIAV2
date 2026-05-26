@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import { Paciente } from '../models/Paciente.js';
+import { Evolucion } from '../models/Evolucion.js';
+import { Turno } from '../models/Turno.js';
 import { AuthRequest } from '../middleware/auth.js';
 import { getNextSequence } from '../models/Counter.js';
 
@@ -66,6 +68,49 @@ export const updatePaciente = async (req: AuthRequest, res: Response): Promise<v
 
     res.json(paciente);
   } catch (error) {
+    res.status(500).json({ message: 'Error en el servidor' });
+  }
+};
+
+export const getTimeline = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id;
+
+    const [evoluciones, turnos] = await Promise.all([
+      Evolucion.find({ pacienteId: id, usuarioId: userId }).sort({ fecha: -1, sesion: -1 }).lean(),
+      Turno.find({ pacienteId: id, creadoPor: userId }).sort({ fecha: -1, horaInicio: -1 }).lean(),
+    ]);
+
+    const timeline: any[] = [
+      ...evoluciones.map(e => ({ ...e, _tipo: 'evolucion', _orden: e.fecha + 'T' + String(e.sesion).padStart(6, '0') })),
+      ...turnos.map(t => ({ ...t, _tipo: 'turno', _orden: t.fecha + 'T' + (t.horaInicio || '00:00') })),
+    ];
+    timeline.sort((a, b) => b._orden.localeCompare(a._orden));
+
+    res.json(timeline);
+  } catch {
+    res.status(500).json({ message: 'Error en el servidor' });
+  }
+};
+
+export const updateSesiones = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { sesionesRealizadas } = req.body;
+    const userId = req.user?.id;
+
+    const paciente = await Paciente.findOneAndUpdate(
+      { id, usuarioId: userId },
+      { sesionesRealizadas },
+      { new: true }
+    );
+    if (!paciente) {
+      res.status(404).json({ message: 'Paciente no encontrado' });
+      return;
+    }
+    res.json(paciente);
+  } catch {
     res.status(500).json({ message: 'Error en el servidor' });
   }
 };

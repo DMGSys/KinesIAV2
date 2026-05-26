@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { Paciente } from '../models/Paciente.js';
 import { Evolucion } from '../models/Evolucion.js';
+import { Turno } from '../models/Turno.js';
 import { AuthRequest } from '../middleware/auth.js';
 import PDFDocument from 'pdfkit';
 
@@ -19,6 +20,10 @@ export const generatePatientPDF = async (req: AuthRequest, res: Response): Promi
       .sort({ sesion: -1 })
       .select('fecha sesion kinesiologo contenido tipo');
 
+    const turnos = await Turno.find({ pacienteId: id, creadoPor: userId })
+      .sort({ fecha: -1, horaInicio: -1 })
+      .lean();
+
     const doc = new PDFDocument({ margin: 50, size: 'A4' });
 
     res.setHeader('Content-Type', 'application/pdf');
@@ -35,13 +40,14 @@ export const generatePatientPDF = async (req: AuthRequest, res: Response): Promi
     doc.fontSize(12).fillColor('#0d9488').text('DATOS DEL PACIENTE', { underline: true });
     doc.fontSize(10).fillColor('#333');
     const datos = [
-      [`Teléfono: ${paciente.telefono}`, `Email: ${paciente.email}`],
-      [`Obra Social: ${paciente.obraSocial} ${paciente.nroAfiliado ? '· #' + paciente.nroAfiliado : ''}`, `Médico Derivante: ${paciente.medicoDerivante}`],
-      [`Fecha de Ingreso: ${paciente.fechaIngreso}`, `Sesiones: ${paciente.sesionesRealizadas}/${paciente.sesionesTotales}`]
+      `Teléfono: ${paciente.telefono}`,
+      `Email: ${paciente.email}`,
+      `Obra Social: ${paciente.obraSocial}${paciente.nroAfiliado ? ' · #' + paciente.nroAfiliado : ''}`,
+      `Médico Derivante: ${paciente.medicoDerivante}`,
+      `Fecha de Ingreso: ${paciente.fechaIngreso}`,
+      `Sesiones: ${paciente.sesionesRealizadas}/${paciente.sesionesTotales}`,
     ];
-    datos.forEach(([a, b]) => {
-      doc.text(a, { continued: !!b }).text(b || '');
-    });
+    datos.forEach(linea => doc.text(linea));
     doc.moveDown();
 
     doc.fontSize(12).fillColor('#0d9488').text('DIAGNÓSTICO', { underline: true });
@@ -69,6 +75,24 @@ export const generatePatientPDF = async (req: AuthRequest, res: Response): Promi
         if (i < evoluciones.length - 1) doc.moveDown(0.5);
       });
     }
+
+    doc.fontSize(12).fillColor('#0d9488').text(`TURNOS (${turnos.length})`, { underline: true });
+    doc.moveDown();
+
+    if (turnos.length === 0) {
+      doc.fontSize(10).fillColor('#888').text('No hay turnos registrados.');
+    } else {
+      turnos.forEach((turno, i) => {
+        const t = turno as any;
+        const estado = t.estado || 'pendiente';
+        doc.fontSize(10).fillColor('#0d9488').text(`${t.fecha} ${t.horaInicio || ''} - ${t.horaFin || ''} [${estado}]`);
+        if (t.notas) {
+          doc.fontSize(9).fillColor('#333').text(t.notas);
+        }
+        if (i < turnos.length - 1) doc.moveDown(0.3);
+      });
+    }
+    doc.moveDown();
 
     doc.moveDown(2);
     doc.fontSize(8).fillColor('#888').text(`Documento generado el ${new Date().toLocaleDateString('es-AR')} — KinesIA`, { align: 'center' });

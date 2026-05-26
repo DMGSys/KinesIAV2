@@ -70,7 +70,9 @@ export default function DashboardPage() {
     navigate('/login');
   };
 
-  const isAdmin = getAuth()?.user?.roles?.includes('admin');
+  const authUser = getAuth()?.user;
+  const isAdmin = authUser?.roles?.includes('admin');
+  const isAgendaVisible = authUser?.roles?.some(r => r === 'kinesiologo' || r === 'secretario');
 
   const handleExportPDF = async (pacienteId: string) => {
     if (pdfLoading === pacienteId) return;
@@ -110,6 +112,11 @@ export default function DashboardPage() {
             {isAdmin && (
               <button onClick={() => navigate('/admin')} className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full hover:bg-purple-200 transition-colors">
                 Panel Admin
+              </button>
+            )}
+            {isAgendaVisible && (
+              <button onClick={() => navigate('/agenda')} className="text-xs bg-teal-100 text-teal-700 px-2 py-1 rounded-full hover:bg-teal-200 transition-colors">
+                Agenda
               </button>
             )}
           </div>

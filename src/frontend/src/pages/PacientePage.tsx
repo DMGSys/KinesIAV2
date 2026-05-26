@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api, getAuth, getToken } from '../lib/api';
 
-type Tab = 'ficha' | 'evoluciones' | 'nueva';
+type Tab = 'ficha' | 'evoluciones' | 'historia' | 'nueva';
 
 interface Paciente {
   id: string;
@@ -58,6 +58,14 @@ export default function PacientePage() {
   const chunksRef = useRef<Blob[]>([]);
   const [saving, setSaving] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [timeline, setTimeline] = useState<any[]>([]);
+  const [timelineLoading, setTimelineLoading] = useState(false);
+  const [editSesiones, setEditSesiones] = useState(false);
+  const [sesionesInput, setSesionesInput] = useState(0);
+  const [showNewEntry, setShowNewEntry] = useState(false);
+  const [newEntryContent, setNewEntryContent] = useState('');
+  const [newEntryDate, setNewEntryDate] = useState('');
+  const [expandedItem, setExpandedItem] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -79,6 +87,52 @@ export default function PacientePage() {
       setPaciente(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadTimeline = async () => {
+    if (!id) return;
+    setTimelineLoading(true);
+    try {
+      const res = await api.get(`/api/pacientes/${id}/timeline`);
+      setTimeline(res.data);
+    } catch {
+      setTimeline([]);
+    } finally {
+      setTimelineLoading(false);
+    }
+  };
+
+  const handleUpdateSesiones = async () => {
+    if (!id || !paciente) return;
+    try {
+      const res = await api.patch(`/api/pacientes/${id}/sesiones`, { sesionesRealizadas: sesionesInput });
+      setPaciente(prev => prev ? { ...prev, sesionesRealizadas: res.data.sesionesRealizadas } : prev);
+      setEditSesiones(false);
+    } catch {
+      alert('Error al actualizar sesiones');
+    }
+  };
+
+  const handleNewEntry = async () => {
+    if (!id || !newEntryContent || !newEntryDate) return;
+    try {
+      const auth = getAuth();
+      await api.post('/api/evoluciones', {
+        pacienteId: id,
+        fecha: newEntryDate,
+        sesion: (paciente?.sesionesRealizadas || 0) + 1,
+        kinesiologo: `${auth?.user?.nombre || ''} ${auth?.user?.apellido || ''}`.trim() || auth?.user?.usuario || '',
+        contenido: newEntryContent,
+        tipo: 'escrita',
+      });
+      setShowNewEntry(false);
+      setNewEntryContent('');
+      setNewEntryDate('');
+      loadTimeline();
+      loadData();
+    } catch {
+      alert('Error al crear entrada');
     }
   };
 
@@ -281,6 +335,12 @@ export default function PacientePage() {
               {t === 'nueva' && '🎙️ Nueva nota'}
             </button>
           ))}
+          <button
+            onClick={() => { setTab('historia'); loadTimeline(); }}
+            className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 ${tab === 'historia' ? 'text-primary border-primary' : 'text-slate-500 border-transparent hover:text-slate-700'}`}
+          >
+            📋 Historia Clínica
+          </button>
         </nav>
       </header>
 
@@ -401,6 +461,116 @@ export default function PacientePage() {
                     <p className="text-xs text-slate-400 mt-2">Por {evo.kinesiologo}</p>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab === 'historia' && (
+          <div className="space-y-4">
+            <div className="card">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-semibold text-slate-700">{paciente?.nombre} · {paciente?.dni}</p>
+                  <p className="text-sm text-slate-500">{paciente?.diagnostico}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {editSesiones ? (
+                    <div className="flex items-center gap-1">
+                      <input type="number" className="input-field w-16 text-center text-sm py-1" value={sesionesInput}
+                        onChange={(e) => setSesionesInput(Number(e.target.value))} min={0} />
+                      <span className="text-sm text-slate-400">/{paciente?.sesionesTotales || 0}</span>
+                      <button onClick={handleUpdateSesiones} className="btn-primary text-xs px-2 py-1">OK</button>
+                      <button onClick={() => setEditSesiones(false)} className="btn-secondary text-xs px-2 py-1">X</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => { setSesionesInput(paciente?.sesionesRealizadas || 0); setEditSesiones(true); }}
+                      className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-200 transition-colors">
+                      Sesiones: {paciente?.sesionesRealizadas || 0}/{paciente?.sesionesTotales || 0} ✏️
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {timelineLoading ? (
+              <div className="text-center py-8 text-slate-400">Cargando...</div>
+            ) : timeline.length === 0 ? (
+              <div className="card text-center py-8 text-slate-400">
+                Sin registros clínicos aún
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {timeline.map((item, i) => (
+                  <div key={item._id || i} className="card py-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`text-xs px-2 py-0.5 rounded font-medium ${item._tipo === 'evolucion' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
+                            {item._tipo === 'evolucion' ? `Evolución #${item.sesion || ''}` : 'Turno'}
+                          </span>
+                          <span className="text-xs text-slate-400">{item.fecha}</span>
+                          {item._tipo === 'turno' && item.horaInicio && (
+                            <span className="text-xs text-slate-400">{item.horaInicio} - {item.horaFin || ''}</span>
+                          )}
+                        </div>
+                        {item._tipo === 'evolucion' && (
+                          <div>
+                            <p className="text-xs text-slate-500 mb-1">{item.kinesiologo} {item.tipo === 'audio' ? '🎤' : '✍️'}</p>
+                            <p className="text-sm text-slate-600">
+                              {expandedItem === item._id ? item.contenido : (item.contenido?.slice(0, 120) + (item.contenido?.length > 120 ? '...' : ''))}
+                            </p>
+                            {item.contenido?.length > 120 && (
+                              <button onClick={() => setExpandedItem(expandedItem === item._id ? null : item._id)}
+                                className="text-xs text-primary hover:underline mt-1">
+                                {expandedItem === item._id ? 'Ver menos' : 'Ver más'}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        {item._tipo === 'turno' && (
+                          <div>
+                            <p className="text-xs text-slate-500 mb-1">
+                              {(item as any).profesionalId || ''} · {(item as any).estado || 'pendiente'}
+                            </p>
+                            {(item as any).notas && (
+                              <p className="text-sm text-slate-600">
+                                {expandedItem === item._id ? (item as any).notas : ((item as any).notas?.slice(0, 120) + ((item as any).notas?.length > 120 ? '...' : ''))}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button onClick={() => { setNewEntryDate(new Date().toISOString().slice(0, 10)); setShowNewEntry(true); }}
+              className="fixed bottom-6 right-6 w-14 h-14 bg-primary text-white rounded-full shadow-lg hover:bg-primary-dark transition-colors flex items-center justify-center text-2xl z-20">
+              +
+            </button>
+
+            {showNewEntry && (
+              <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => setShowNewEntry(false)}>
+                <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4" onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-slate-700">Nueva entrada clínica</h3>
+                    <button onClick={() => setShowNewEntry(false)} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+                  </div>
+                  <div>
+                    <label className="label">Fecha</label>
+                    <input type="date" className="input-field" value={newEntryDate} onChange={e => setNewEntryDate(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="label">Contenido</label>
+                    <textarea className="input-field min-h-[120px]" value={newEntryContent} onChange={e => setNewEntryContent(e.target.value)} placeholder="Detalle de la evolución clínica..." />
+                  </div>
+                  <button onClick={handleNewEntry} disabled={!newEntryContent || !newEntryDate} className="btn-primary w-full">
+                    Guardar entrada
+                  </button>
+                </div>
               </div>
             )}
           </div>

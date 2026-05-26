@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, clearAuth, getAuth } from '../lib/api';
 
@@ -21,6 +21,15 @@ interface Usuario {
   celular: string;
   roles: string[];
   activo: boolean;
+}
+
+interface AuditEntry {
+  _id: string;
+  usuarioNombre: string;
+  accion: string;
+  descripcion: string;
+  cambios: { campo: string; valorAnterior: unknown; valorNuevo: unknown }[];
+  createdAt: string;
 }
 
 const ALL_ROLES = [
@@ -47,6 +56,11 @@ export default function AdminPage() {
   const [toggling, setToggling] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState<string | null>(null);
   const [creatingUser, setCreatingUser] = useState(false);
+  const [editingUserData, setEditingUserData] = useState<Usuario | null>(null);
+  const [editFormData, setEditFormData] = useState({ nombre: '', apellido: '', correo: '', celular: '', usuario: '', contrasena: '', roles: [] as string[] });
+  const [showingAuditFor, setShowingAuditFor] = useState<string | null>(null);
+  const [auditLogs, setAuditLogs] = useState<AuditEntry[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
 
   useEffect(() => {
     if (!auth || !auth.user.roles.includes('admin')) {
@@ -159,6 +173,62 @@ export default function AdminPage() {
         ? prev.filter(r => r !== role)
         : [...prev, role]
     );
+  };
+
+  const openEditUser = (u: Usuario) => {
+    setEditingUserData(u);
+    setEditFormData({ nombre: u.nombre, apellido: u.apellido, correo: u.correo, celular: u.celular, usuario: u.usuario, contrasena: '', roles: [...u.roles] });
+  };
+
+  const handleSaveUser = async () => {
+    if (!editingUserData) return;
+    const payload: Record<string, unknown> = {
+      nombre: editFormData.nombre,
+      apellido: editFormData.apellido,
+      correo: editFormData.correo,
+      celular: editFormData.celular,
+      usuario: editFormData.usuario,
+      roles: editFormData.roles,
+    };
+    if (editFormData.contrasena) {
+      payload.contrasena = editFormData.contrasena;
+    }
+    try {
+      await api.put(`/api/usuarios/${editingUserData._id}`, payload);
+      setEditingUserData(null);
+      loadData();
+    } catch {
+      alert('Error al guardar usuario');
+    }
+  };
+
+  const loadAudit = useCallback(async (userId: string) => {
+    setAuditLoading(true);
+    try {
+      const res = await api.get(`/api/audit?documentoId=${userId}&limit=50`);
+      setAuditLogs(res.data);
+      setShowingAuditFor(userId);
+    } catch {
+      alert('Error al cargar auditoría');
+    } finally {
+      setAuditLoading(false);
+    }
+  }, []);
+
+  const formatDate = (d: string) => {
+    const date = new Date(d);
+    return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
+
+  const accionLabel = (a: string) => {
+    const map: Record<string, string> = {
+      crear_usuario: 'Creación',
+      actualizar_usuario: 'Actualización',
+      actualizar_roles: 'Cambio de roles',
+      activar_usuario: 'Activación',
+      desactivar_usuario: 'Desactivación',
+    };
+    return map[a] || a;
   };
 
   if (!auth || !auth.user.roles.includes('admin')) return null;
@@ -343,6 +413,42 @@ export default function AdminPage() {
                             <button onClick={() => setEditingRoles(null)} className="btn-secondary text-xs px-3 py-1">Cancelar</button>
                           </div>
                         </div>
+                      ) : showingAuditFor === u._id ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <p className="font-medium text-slate-700 text-sm">Auditoría de {u.nombre} {u.apellido}</p>
+                            <button onClick={() => setShowingAuditFor(null)} className="text-xs text-slate-400 hover:text-red-600">Cerrar</button>
+                          </div>
+                          {auditLoading ? (
+                            <p className="text-sm text-slate-400">Cargando...</p>
+                          ) : auditLogs.length === 0 ? (
+                            <p className="text-sm text-slate-400">Sin registros de auditoría</p>
+                          ) : (
+                            <div className="space-y-2 max-h-72 overflow-y-auto">
+                              {auditLogs.map(log => (
+                                <div key={log._id} className="p-2 rounded bg-slate-50 text-xs">
+                                  <div className="flex items-center justify-between text-slate-500 mb-1">
+                                    <span className="font-medium">{accionLabel(log.accion)}</span>
+                                    <span>{formatDate(log.createdAt)}</span>
+                                  </div>
+                                  <p className="text-slate-600 mb-1">por {log.usuarioNombre}</p>
+                                  {log.cambios.length > 0 && (
+                                    <div className="space-y-0.5">
+                                      {log.cambios.map((c, ci) => (
+                                        <p key={ci} className="text-slate-400">
+                                          <span className="font-mono">{c.campo}</span>:{' '}
+                                          <span className="line-through text-red-500">{JSON.stringify(c.valorAnterior)}</span>{' '}
+                                          →{' '}
+                                          <span className="text-green-600">{JSON.stringify(c.valorNuevo)}</span>
+                                        </p>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         <div className="flex items-center justify-between">
                           <div>
@@ -357,11 +463,18 @@ export default function AdminPage() {
                           </div>
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() => { setEditingRoles(u._id); setEditRolesValue([...u.roles]); }}
-                              className="text-xs text-slate-400 hover:text-primary transition-colors"
-                              title="Editar roles"
+                              onClick={() => openEditUser(u)}
+                              className="text-xs text-slate-400 hover:text-blue-600 transition-colors"
+                              title="Editar usuario"
                             >
                               ✏️
+                            </button>
+                            <button
+                              onClick={() => loadAudit(u._id)}
+                              className="text-xs text-slate-400 hover:text-amber-600 transition-colors"
+                              title="Auditoría"
+                            >
+                              📋
                             </button>
                             <button
                               onClick={() => handleToggleActive(u._id, u.activo)}
@@ -379,6 +492,72 @@ export default function AdminPage() {
               </div>
             )}
           </>
+        )}
+
+        {editingUserData && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={() => setEditingUserData(null)}>
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-slate-700">Editar usuario</h3>
+                <button onClick={() => setEditingUserData(null)} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+              </div>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">Nombre</label>
+                    <input type="text" className="input-field" value={editFormData.nombre}
+                      onChange={(e) => setEditFormData({ ...editFormData, nombre: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="label">Apellido</label>
+                    <input type="text" className="input-field" value={editFormData.apellido}
+                      onChange={(e) => setEditFormData({ ...editFormData, apellido: e.target.value })} />
+                  </div>
+                </div>
+                <div>
+                  <label className="label">Correo</label>
+                  <input type="email" className="input-field" value={editFormData.correo}
+                    onChange={(e) => setEditFormData({ ...editFormData, correo: e.target.value })} />
+                </div>
+                <div>
+                  <label className="label">Celular</label>
+                  <input type="tel" className="input-field" value={editFormData.celular}
+                    onChange={(e) => setEditFormData({ ...editFormData, celular: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">Usuario</label>
+                    <input type="text" className="input-field" value={editFormData.usuario}
+                      onChange={(e) => setEditFormData({ ...editFormData, usuario: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="label">Nueva contraseña</label>
+                    <input type="password" className="input-field" value={editFormData.contrasena}
+                      onChange={(e) => setEditFormData({ ...editFormData, contrasena: e.target.value })} placeholder="Dejar vacío = sin cambios" />
+                  </div>
+                </div>
+                <div>
+                  <label className="label">Roles</label>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {ALL_ROLES.map(r => (
+                      <label key={r.value} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                        <input type="checkbox" checked={editFormData.roles.includes(r.value)}
+                          onChange={() => setEditFormData(prev => ({
+                            ...prev,
+                            roles: prev.roles.includes(r.value) ? prev.roles.filter(x => x !== r.value) : [...prev.roles, r.value]
+                          }))} className="rounded border-slate-300" />
+                        <span className={`text-xs px-2 py-0.5 rounded ${r.color}`}>{r.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button onClick={handleSaveUser} className="btn-primary flex-1">Guardar cambios</button>
+                <button onClick={() => setEditingUserData(null)} className="btn-secondary flex-1">Cancelar</button>
+              </div>
+            </div>
+          </div>
         )}
       </main>
     </div>
