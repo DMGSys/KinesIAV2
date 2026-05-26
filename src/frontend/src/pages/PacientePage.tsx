@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { api, getAuth } from '../lib/api';
+import { api, getAuth, getToken } from '../lib/api';
 
 type Tab = 'ficha' | 'evoluciones' | 'nueva';
 
@@ -56,6 +56,8 @@ export default function PacientePage() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -107,12 +109,31 @@ export default function PacientePage() {
     } catch {
       if (timerRef.current) clearInterval(timerRef.current);
       setRecState('procesando');
-      setTimeout(() => simulateTranscription(), 1800);
+      setTimeout(() => fallbackTranscription(), 1800);
     }
   };
 
-  const processAudio = async (_blob: Blob) => {
-    setTimeout(() => simulateTranscription(), 1600);
+  const processAudio = async (blob: Blob) => {
+    if (transcriptionMode === 'simulate') {
+      setTimeout(() => simulateTranscription(), 1600);
+      return;
+    }
+    try {
+      const formData = new FormData();
+      formData.append('audio', blob, 'audio.webm');
+      const token = getToken();
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/transcribir`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!res.ok) throw new Error('Error al transcribir');
+      const data = await res.json();
+      setTranscripcion(data.texto || '');
+      setRecState('listo');
+    } catch {
+      fallbackTranscription();
+    }
   };
 
   const simulateTranscription = () => {
@@ -121,18 +142,23 @@ export default function PacientePage() {
     setRecState('listo');
   };
 
+  const fallbackTranscription = () => {
+    simulateTranscription();
+  };
+
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     } else {
       if (timerRef.current) clearInterval(timerRef.current);
       setRecState('procesando');
-      setTimeout(() => simulateTranscription(), 1800);
+      setTimeout(() => fallbackTranscription(), 1800);
     }
   };
 
   const handleConfirmar = async () => {
-    if (!transcripcion.trim() || !paciente) return;
+    if (!transcripcion.trim() || !paciente || saving) return;
+    setSaving(true);
     const auth = getAuth();
     const kinesiologo = auth ? `${(auth.user as any).nombre} ${(auth.user as any).apellido}` : 'Kinesiólogo';
     try {
@@ -154,13 +180,16 @@ export default function PacientePage() {
       const evoRes = await api.get(`/api/evoluciones?pacienteId=${id}`);
       setEvoluciones(evoRes.data);
       setTab('evoluciones');
-    } catch (err) {
-      console.error(err);
+    } catch {
+      alert('Error al guardar la evolución');
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleExportPDF = async () => {
-    if (!id) return;
+    if (!id || pdfLoading) return;
+    setPdfLoading(true);
     try {
       const token = localStorage.getItem('kinesia_token');
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/reportes/paciente/${id}`, {
@@ -178,6 +207,8 @@ export default function PacientePage() {
       window.URL.revokeObjectURL(url);
     } catch {
       alert('Error al generar el PDF');
+    } finally {
+      setPdfLoading(false);
     }
   };
 
@@ -224,10 +255,16 @@ export default function PacientePage() {
           </div>
           <button
             onClick={handleExportPDF}
-            className="text-sm text-primary border border-primary px-3 py-1 rounded-lg hover:bg-teal-50 transition-colors flex items-center gap-1"
+            disabled={pdfLoading}
+            className={`text-sm border px-3 py-1 rounded-lg transition-colors flex items-center gap-1 ${pdfLoading ? 'text-slate-300 border-slate-200' : 'text-primary border-primary hover:bg-teal-50'}`}
             title="Exportar historia clínica en PDF"
           >
-            📄 PDF
+            {pdfLoading ? (
+              <span className="inline-flex items-center gap-1">
+                <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                Generando PDF...
+              </span>
+            ) : '📄 PDF'}
           </button>
         </div>
         <nav className="max-w-2xl mx-auto px-4 flex border-t border-slate-100">
@@ -451,8 +488,13 @@ export default function PacientePage() {
                   placeholder="Editá la transcripción si es necesario..."
                 />
                 <div className="flex gap-3">
-                  <button onClick={handleConfirmar} className="btn-primary flex-1">
-                    ✅ Agregar a evoluciones
+                  <button onClick={handleConfirmar} disabled={saving} className={`btn-primary flex-1 ${saving ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                    {saving ? (
+                      <span className="inline-flex items-center gap-2">
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                        Guardando evolución...
+                      </span>
+                    ) : '✅ Agregar a evoluciones'}
                   </button>
                   <button onClick={handleDescartar} className="btn-secondary">
                     Descartar

@@ -40,15 +40,15 @@
 
 ## Stack tecnológico
 
-| Capa | Tecnología |
-|------|------------|
-| **Frontend** | React 18 + Vite 5 + TypeScript 5 + Tailwind CSS 3 |
-| **Backend** | Node.js + Express + TypeScript |
-| **Base de datos** | MongoDB (Mongoose 8) |
-| **Auth** | JWT + bcrypt (10 rounds) |
-| **Contenedores** | Docker Compose |
-| **Navegación** | React Router DOM v6 |
-| **HTTP Client** | Axios |
+| Capa              | Tecnología                                        |
+| ----------------- | ------------------------------------------------- |
+| **Frontend**      | React 18 + Vite 5 + TypeScript 5 + Tailwind CSS 3 |
+| **Backend**       | Node.js + Express + TypeScript                    |
+| **Base de datos** | MongoDB (Mongoose 8)                              |
+| **Auth**          | JWT + bcrypt (10 rounds)                          |
+| **Contenedores**  | Docker Compose                                    |
+| **Navegación**    | React Router DOM v6                               |
+| **HTTP Client**   | Axios                                             |
 
 ---
 
@@ -189,63 +189,64 @@ KinesIA2/
 
 ### Autenticación
 
-| Método | Endpoint | Descripción | Auth |
-|--------|----------|-------------|------|
-| POST | `/api/auth/register` | Registro de usuario | No |
-| POST | `/api/auth/login` | Login (retorna JWT) | No |
-| POST | `/api/auth/recover` | Recuperar contraseña | No |
-| GET | `/api/auth/me` | Datos del usuario autenticado | JWT |
+| Método | Endpoint             | Descripción                   | Auth |
+| ------ | -------------------- | ----------------------------- | ---- |
+| POST   | `/api/auth/register` | Registro de usuario           | No   |
+| POST   | `/api/auth/login`    | Login (retorna JWT)           | No   |
+| POST   | `/api/auth/recover`  | Recuperar contraseña          | No   |
+| GET    | `/api/auth/me`       | Datos del usuario autenticado | JWT  |
 
 ### Pacientes
 
-| Método | Endpoint | Descripción | Auth |
-|--------|----------|-------------|------|
-| GET | `/api/pacientes` | Lista todos los pacientes del usuario | JWT |
-| GET | `/api/pacientes/:id` | Detalle de un paciente | JWT |
-| POST | `/api/pacientes` | Crear paciente (ID auto-generado si se omite) | JWT |
-| PUT | `/api/pacientes/:id` | Actualizar paciente | JWT |
+| Método | Endpoint             | Descripción                                   | Auth |
+| ------ | -------------------- | --------------------------------------------- | ---- |
+| GET    | `/api/pacientes`     | Lista todos los pacientes del usuario         | JWT  |
+| GET    | `/api/pacientes/:id` | Detalle de un paciente                        | JWT  |
+| POST   | `/api/pacientes`     | Crear paciente (ID auto-generado si se omite) | JWT  |
+| PUT    | `/api/pacientes/:id` | Actualizar paciente                           | JWT  |
 
 ### Evoluciones
 
-| Método | Endpoint | Descripción | Auth |
-|--------|----------|-------------|------|
-| GET | `/api/evoluciones` | Lista evoluciones (filtrable por `?pacienteId=`) | JWT |
-| POST | `/api/evoluciones` | Crear evolución | JWT |
-| GET | `/api/evoluciones/next/:pacienteId` | Obtener siguiente número de sesión | JWT |
+| Método | Endpoint                            | Descripción                                      | Auth |
+| ------ | ----------------------------------- | ------------------------------------------------ | ---- |
+| GET    | `/api/evoluciones`                  | Lista evoluciones (filtrable por `?pacienteId=`) | JWT  |
+| POST   | `/api/evoluciones`                  | Crear evolución                                  | JWT  |
+| GET    | `/api/evoluciones/next/:pacienteId` | Obtener siguiente número de sesión               | JWT  |
 
 ### Usuarios (solo admin)
 
-| Método | Endpoint | Descripción | Auth |
-|--------|----------|-------------|------|
-| GET | `/api/usuarios` | Lista todos los usuarios | JWT + Admin |
-| POST | `/api/usuarios` | Crear usuario (kinesiólogo o admin) | JWT + Admin |
-| PUT | `/api/usuarios/:id` | Actualizar usuario | JWT + Admin |
-| PATCH | `/api/usuarios/:id/toggle` | Activar/desactivar usuario | JWT + Admin |
-| DELETE | `/api/usuarios/:id` | Eliminar usuario | JWT + Admin |
+| Método | Endpoint                   | Descripción                         | Auth        |
+| ------ | -------------------------- | ----------------------------------- | ----------- |
+| GET    | `/api/usuarios`            | Lista todos los usuarios            | JWT + Admin |
+| POST   | `/api/usuarios`            | Crear usuario (kinesiólogo o admin) | JWT + Admin |
+| PUT    | `/api/usuarios/:id`        | Actualizar usuario                  | JWT + Admin |
+| PATCH  | `/api/usuarios/:id/toggle` | Activar/desactivar usuario          | JWT + Admin |
+| DELETE | `/api/usuarios/:id`        | Eliminar usuario                    | JWT + Admin |
 
 ### Reportes
 
-| Método | Endpoint | Descripción | Auth |
-|--------|----------|-------------|------|
-| GET | `/api/reportes/paciente/:id` | Genera PDF con historia clínica completa | JWT |
+| Método | Endpoint                     | Descripción                              | Auth |
+| ------ | ---------------------------- | ---------------------------------------- | ---- |
+| GET    | `/api/reportes/paciente/:id` | Genera PDF con historia clínica completa | JWT  |
 
 ### Estadísticas (solo admin)
 
-| Método | Endpoint | Descripción | Auth |
-|--------|----------|-------------|------|
-| GET | `/api/stats` | Stats generales: pacientes, kinesiólogos, evoluciones, sesiones | JWT |
+| Método | Endpoint     | Descripción                                                     | Auth |
+| ------ | ------------ | --------------------------------------------------------------- | ---- |
+| GET    | `/api/stats` | Stats generales: pacientes, kinesiólogos, evoluciones, sesiones | JWT  |
 
 ### Sistema
 
-| Método | Endpoint | Descripción | Auth |
-|--------|----------|-------------|------|
-| GET | `/api/health` | Health check | No |
+| Método | Endpoint      | Descripción  | Auth |
+| ------ | ------------- | ------------ | ---- |
+| GET    | `/api/health` | Health check | No   |
 
 ---
 
 ## Modelos de datos
 
 ### User
+
 ```json
 {
   "usuario": "string (único)",
@@ -259,6 +260,7 @@ KinesIA2/
 ```
 
 ### Paciente
+
 ```json
 {
   "id": "string",
@@ -281,6 +283,7 @@ KinesIA2/
 ```
 
 ### Evolucion
+
 ```json
 {
   "pacienteId": "string",
@@ -297,22 +300,26 @@ KinesIA2/
 ## Flujo de la aplicación
 
 ### 1. Registro
+
 ```
 http://localhost → LoginPage → "Crear cuenta" → Formulario de registro → /dashboard
 ```
 
 ### 2. Login
+
 ```
 http://localhost → LoginPage → Usuario + Contraseña → JWT → /dashboard
 ```
 
 ### 3. Gestión de pacientes
+
 ```
 /dashboard → "+ Agregar paciente" → Modal con formulario → Guardar → Lista actualizada
 /dashboard → Click en paciente → /paciente/:id
 ```
 
 ### 4. Ficha del paciente
+
 ```
 /paciente/:id → Tab "👤 Ficha"
   → Avatar + datos demográficos
@@ -322,6 +329,7 @@ http://localhost → LoginPage → Usuario + Contraseña → JWT → /dashboard
 ```
 
 ### 5. Historial de evoluciones
+
 ```
 /paciente/:id → Tab "📋 Evoluciones"
   → Lista cronológica inversa
@@ -330,6 +338,7 @@ http://localhost → LoginPage → Usuario + Contraseña → JWT → /dashboard
 ```
 
 ### 6. Nueva nota de evolución
+
 ```
 /paciente/:id → Tab "🎙️ Nueva nota"
   → "Grabar nota de voz" (usa getUserMedia)
@@ -421,18 +430,18 @@ cd src/backend && npm install && npm run build
 
 ### Backend (`src/backend/.env`)
 
-| Variable | Descripción | Valor por defecto |
-|----------|-------------|-------------------|
-| `PORT` | Puerto del servidor | `3001` |
-| `MONGO_URI` | URI de conexión MongoDB | `mongodb://localhost:27017/kinesia` |
-| `JWT_SECRET` | Clave secreta para JWT | *(cambiar en producción)* |
-| `JWT_EXPIRES_IN` | Tiempo de expiración del token | `5m` |
-| `NODE_ENV` | Entorno de ejecución | `development` |
+| Variable         | Descripción                    | Valor por defecto                   |
+| ---------------- | ------------------------------ | ----------------------------------- |
+| `PORT`           | Puerto del servidor            | `3001`                              |
+| `MONGO_URI`      | URI de conexión MongoDB        | `mongodb://localhost:27017/kinesia` |
+| `JWT_SECRET`     | Clave secreta para JWT         | *(cambiar en producción)*           |
+| `JWT_EXPIRES_IN` | Tiempo de expiración del token | `5m`                                |
+| `NODE_ENV`       | Entorno de ejecución           | `development`                       |
 
 ### Frontend (`src/frontend/.env`)
 
-| Variable | Descripción | Valor por defecto |
-|----------|-------------|-------------------|
+| Variable       | Descripción        | Valor por defecto       |
+| -------------- | ------------------ | ----------------------- |
 | `VITE_API_URL` | URL base de la API | `http://localhost:3001` |
 
 > **En producción con Docker:** `VITE_API_URL` dentro del contenedor Docker debe ser `http://backend:3001` (nombre del servicio en Docker network), no `localhost`. Esto ya está configurado en `docker-compose.yml`.
@@ -469,6 +478,7 @@ cd src/backend && npm install && npm run build
 ## OpenCode configuration and usage
 
 ### Overview
+
 OpenCode is configured with:
 - Default model: `openai/gpt-4.1`
 - Local server: `127.0.0.1:4096`
@@ -476,6 +486,7 @@ OpenCode is configured with:
 - Sample MCP server: `filesystem-example` (disabled by default)
 
 ### Config file
+
 - `~/.config/opencode/opencode.json`
 
 Current sections:
@@ -488,22 +499,26 @@ Current sections:
 - `permission`
 
 ### Prerequisites
+
 Set your API key before running OpenCode:
 - Current PowerShell session: `$env:OPENAI_API_KEY = "{{OPENAI_API_KEY}}"`
 - Persist for future sessions: `setx OPENAI_API_KEY "{{OPENAI_API_KEY}}"`
 
 ### Start server
+
 `opencode serve --port 4096 --hostname 127.0.0.1 --print-logs`
 
 Expected confirmation:
 - `opencode server listening on http://127.0.0.1:4096`
 
 ### Enable MCP server
+
 1. Open config: `notepad "$HOME/.config/opencode/opencode.json"`
 2. In `mcp.filesystem-example`, set `"enabled": true`
 3. Save and restart the OpenCode server
 
 ### MCP scope recommendation
+
 The sample command uses `"."` as exposed path. For safer usage, replace it with a specific folder path.
 
 ---
@@ -513,4 +528,3 @@ The sample command uses `"."` as exposed path. For safer usage, replace it with 
 [MIT License](https://opensource.org/licenses/MIT)
 
 Desarrollado por **Diego Gatica** — 2026
-

@@ -36,6 +36,9 @@ export default function AdminPage() {
   const [newUser, setNewUser] = useState({ usuario: '', contrasena: '', nombre: '', apellido: '', correo: '', celular: '', rol: 'kinesiologo' as 'admin' | 'kinesiologo' });
   const [formError, setFormError] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
+  const [toggling, setToggling] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState<string | null>(null);
+  const [creatingUser, setCreatingUser] = useState(false);
 
   useEffect(() => {
     if (!auth || auth.user.rol !== 'admin') {
@@ -62,8 +65,10 @@ export default function AdminPage() {
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (creatingUser) return;
     setFormError('');
     setFormSuccess('');
+    setCreatingUser(true);
     try {
       await api.post('/api/usuarios', newUser);
       setFormSuccess('Usuario creado exitosamente');
@@ -72,14 +77,22 @@ export default function AdminPage() {
       loadData();
     } catch (err: any) {
       setFormError(err.response?.data?.message || 'Error al crear usuario');
+    } finally {
+      setCreatingUser(false);
     }
   };
 
   const handleToggleActive = async (id: string, _currentActivo: boolean) => {
+    if (toggling === id) return;
+    setToggling(id);
     try {
       await api.patch(`/api/usuarios/${id}/toggle`);
       loadData();
-    } catch {}
+    } catch {
+      alert('Error al cambiar estado del usuario');
+    } finally {
+      setToggling(null);
+    }
   };
 
   const handleLogout = () => {
@@ -88,6 +101,8 @@ export default function AdminPage() {
   };
 
   const handleExportPDF = async (pacienteId: string) => {
+    if (pdfLoading === pacienteId) return;
+    setPdfLoading(pacienteId);
     try {
       const token = localStorage.getItem('kinesia_token');
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/reportes/paciente/${pacienteId}`, {
@@ -105,6 +120,8 @@ export default function AdminPage() {
       window.URL.revokeObjectURL(url);
     } catch {
       alert('Error al generar el PDF');
+    } finally {
+      setPdfLoading(null);
     }
   };
 
@@ -168,7 +185,13 @@ export default function AdminPage() {
                           </div>
                           <div className="flex gap-2">
                             <span className="text-xs text-slate-400">{p.sesionesRealizadas}/{p.sesionesTotales}</span>
-                            <button onClick={() => handleExportPDF(p.id)} className="text-primary hover:text-primary-dark text-xs" title="Exportar PDF">📄</button>
+                            <button onClick={() => handleExportPDF(p.id)} disabled={pdfLoading === p.id} className={`text-xs ${pdfLoading === p.id ? 'text-slate-300' : 'text-primary hover:text-primary-dark'}`} title="Exportar PDF">
+                              {pdfLoading === p.id ? (
+                                <span className="inline-flex items-center gap-1">
+                                  <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                                </span>
+                              ) : '📄'}
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -248,7 +271,14 @@ export default function AdminPage() {
                       </div>
                       {formError && <p className="text-red-600 text-sm">{formError}</p>}
                       {formSuccess && <p className="text-green-600 text-sm">{formSuccess}</p>}
-                      <button type="submit" className="btn-primary w-full">Crear usuario</button>
+                      <button type="submit" disabled={creatingUser} className={`btn-primary w-full ${creatingUser ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                        {creatingUser ? (
+                          <span className="inline-flex items-center gap-2">
+                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                            Creando...
+                          </span>
+                        ) : 'Crear usuario'}
+                      </button>
                     </form>
                   </div>
                 )}
@@ -269,9 +299,10 @@ export default function AdminPage() {
                         </div>
                         <button
                           onClick={() => handleToggleActive(u._id, u.activo)}
-                          className={`text-xs px-3 py-1 rounded-full border transition-colors ${u.activo ? 'border-green-300 text-green-700 hover:bg-green-50' : 'border-red-300 text-red-700 hover:bg-red-50'}`}
+                          disabled={toggling === u._id}
+                          className={`text-xs px-3 py-1 rounded-full border transition-colors ${toggling === u._id ? 'border-slate-200 text-slate-400' : u.activo ? 'border-green-300 text-green-700 hover:bg-green-50' : 'border-red-300 text-red-700 hover:bg-red-50'}`}
                         >
-                          {u.activo ? 'Desactivar' : 'Activar'}
+                          {toggling === u._id ? '...' : (u.activo ? 'Desactivar' : 'Activar')}
                         </button>
                       </div>
                     </div>

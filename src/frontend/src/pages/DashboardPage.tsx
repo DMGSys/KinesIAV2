@@ -24,17 +24,21 @@ export default function DashboardPage() {
     obraSocial: '', nroAfiliado: '', diagnostico: '', medicoDerivante: '',
     fechaIngreso: '', sesionesTotales: '', antecedentes: '', alergias: '', medicacion: ''
   });
+  const [creating, setCreating] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     loadPacientes();
   }, []);
 
   const loadPacientes = async () => {
+    setLoadError('');
     try {
       const res = await api.get('/api/pacientes');
       setPacientes(res.data);
     } catch {
-      setPacientes([]);
+      setLoadError('Error al cargar pacientes. Verificá tu conexión.');
     } finally {
       setLoading(false);
     }
@@ -42,6 +46,8 @@ export default function DashboardPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (creating) return;
+    setCreating(true);
     try {
       const payload: Record<string, unknown> = { ...newPaciente };
       if (payload.id === '') delete payload.id;
@@ -52,8 +58,10 @@ export default function DashboardPage() {
       setShowForm(false);
       setNewPaciente({ id: '', nombre: '', edad: '', dni: '', telefono: '', email: '', obraSocial: '', nroAfiliado: '', diagnostico: '', medicoDerivante: '', fechaIngreso: '', sesionesTotales: '', antecedentes: '', alergias: '', medicacion: '' });
       loadPacientes();
-    } catch (err) {
-      console.error(err);
+    } catch {
+      alert('Error al crear paciente');
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -65,6 +73,8 @@ export default function DashboardPage() {
   const isAdmin = getAuth()?.user?.rol === 'admin';
 
   const handleExportPDF = async (pacienteId: string) => {
+    if (pdfLoading === pacienteId) return;
+    setPdfLoading(pacienteId);
     try {
       const token = localStorage.getItem('kinesia_token');
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/reportes/paciente/${pacienteId}`, {
@@ -82,6 +92,8 @@ export default function DashboardPage() {
       window.URL.revokeObjectURL(url);
     } catch {
       alert('Error al generar el PDF');
+    } finally {
+      setPdfLoading(null);
     }
   };
 
@@ -130,6 +142,13 @@ export default function DashboardPage() {
 
         {loading ? (
           <div className="text-center py-12 text-slate-400">Cargando...</div>
+        ) : loadError ? (
+          <div className="text-center py-12">
+            <p className="text-red-500 mb-2">{loadError}</p>
+            <button onClick={() => { setLoading(true); loadPacientes(); }} className="btn-secondary text-sm">
+              Reintentar
+            </button>
+          </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-slate-400 mb-2">
@@ -165,10 +184,16 @@ export default function DashboardPage() {
                       <span className="text-sm text-slate-400">{paciente.sesionesRealizadas}/{paciente.sesionesTotales}</span>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleExportPDF(paciente.id); }}
-                        className="text-slate-400 hover:text-primary transition-colors text-xs"
+                        disabled={pdfLoading === paciente.id}
+                        className={`transition-colors text-xs ${pdfLoading === paciente.id ? 'text-slate-300' : 'text-slate-400 hover:text-primary'}`}
                         title="Exportar PDF"
                       >
-                        📄 PDF
+                        {pdfLoading === paciente.id ? (
+                          <span className="inline-flex items-center gap-1">
+                            <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                            PDF
+                          </span>
+                        ) : '📄 PDF'}
                       </button>
                     </div>
                   </div>
@@ -270,7 +295,14 @@ export default function DashboardPage() {
                   onChange={(e) => setNewPaciente({ ...newPaciente, medicacion: e.target.value })} />
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="submit" className="btn-primary flex-1">Guardar paciente</button>
+                <button type="submit" disabled={creating} className={`btn-primary flex-1 ${creating ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                  {creating ? (
+                    <span className="inline-flex items-center gap-2">
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                      Guardando...
+                    </span>
+                  ) : 'Guardar paciente'}
+                </button>
                 <button type="button" onClick={() => setShowForm(false)} className="btn-secondary flex-1">Cancelar</button>
               </div>
             </form>

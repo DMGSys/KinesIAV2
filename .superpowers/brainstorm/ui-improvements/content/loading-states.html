@@ -1,0 +1,107 @@
+<h2>Spinners / Estados de Carga</h2>
+<p class="subtitle">Estos son los cambios propuestos para las operaciones que hoy no tienen feedback visual</p>
+
+<div class="section">
+  <h3>1. Botón "Crear paciente" en Dashboard</h3>
+  <p><strong>Problema:</strong> Hoy el botón está siempre activo, se puede clickear múltiples veces sin feedback.</p>
+  <div style="display:flex;gap:2rem;align-items:center;margin-top:1rem">
+    <div class="mockup" style="flex:1">
+      <div class="mockup-header">Actual</div>
+      <div class="mockup-body" style="text-align:center;padding:1.5rem">
+        <button class="mock-button" style="background:#0d9488;color:white;border:none;padding:10px 24px;border-radius:8px;cursor:pointer">Guardar paciente</button>
+        <p style="margin-top:0.75rem;color:#999;font-size:0.85rem">Sin estado de carga — doble click = doble envío</p>
+      </div>
+    </div>
+    <div class="mockup" style="flex:1">
+      <div class="mockup-header">Propuesto</div>
+      <div class="mockup-body" style="text-align:center;padding:1.5rem">
+        <button style="background:#0d9488;color:white;border:none;padding:10px 24px;border-radius:8px;display:inline-flex;align-items:center;gap:8px;opacity:0.7;cursor:not-allowed">
+          <span style="display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin 0.6s linear infinite"></span>
+          Guardando...
+        </button>
+        <p style="margin-top:0.75rem;color:#999;font-size:0.85rem">Botón deshabilitado + spinner + "Guardando..."</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>2. Botón "Agregar a evoluciones" en PacientePage</h3>
+  <p><strong>Problema:</strong> Hace 3 llamadas API (next sesión + crear + recargar) sin ningún feedback.</p>
+  <div style="display:flex;gap:2rem;align-items:center;margin-top:1rem">
+    <div class="mockup" style="flex:1">
+      <div class="mockup-header">Actual</div>
+      <div class="mockup-body" style="text-align:center;padding:1.5rem">
+        <button class="mock-button" style="background:#0d9488;color:white;border:none;padding:10px 24px;border-radius:8px;cursor:pointer">✅ Agregar a evoluciones</button>
+        <p style="margin-top:0.75rem;color:#999;font-size:0.85rem">Sin feedback — triple API call invisible</p>
+      </div>
+    </div>
+    <div class="mockup" style="flex:1">
+      <div class="mockup-header">Propuesto</div>
+      <div class="mockup-body" style="text-align:center;padding:1.5rem">
+        <button style="background:#0d9488;color:white;border:none;padding:10px 24px;border-radius:8px;display:inline-flex;align-items:center;gap:8px;opacity:0.7;cursor:not-allowed">
+          <span style="display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin 0.6s linear infinite"></span>
+          Guardando evolución...
+        </button>
+        <p style="margin-top:0.75rem;color:#999;font-size:0.85rem">Deshabilitado + spinner + texto contextual</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>3. Toggle Activar/Desactivar en Admin</h3>
+  <p><strong>Problema:</strong> Click en toggle no muestra carga. Error silencioso en catch vacío.</p>
+  <div style="display:flex;gap:2rem;align-items:center;margin-top:1rem">
+    <div class="mockup" style="flex:1">
+      <div class="mockup-header">Actual</div>
+      <div class="mockup-body" style="text-align:center;padding:1.5rem">
+        <div style="display:flex;align-items:center;gap:8px;justify-content:center">
+          <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#22c55e"></span>
+          <span>Activo</span>
+          <button style="background:#ef4444;color:white;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:0.8rem">Desactivar</button>
+        </div>
+        <p style="margin-top:0.75rem;color:#999;font-size:0.85rem">Sin estado durante la operación</p>
+      </div>
+    </div>
+    <div class="mockup" style="flex:1">
+      <div class="mockup-header">Propuesto</div>
+      <div class="mockup-body" style="text-align:center;padding:1.5rem">
+        <div style="display:flex;align-items:center;gap:8px;justify-content:center">
+          <span style="display:inline-block;width:12px;height:12px;border:none;border-radius:50%;width:16px;height:16px;border:2px solid #ddd;border-top-color:#0d9488;border-radius:50%;animation:spin 0.6s linear infinite"></span>
+          <span style="color:#999">Actualizando...</span>
+        </div>
+        <p style="margin-top:0.75rem;color:#999;font-size:0.85rem">Spinner inline + texto mientras procesa</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>4. Botones Exportar PDF</h3>
+  <p><strong>Problema:</strong> El botón PDF no muestra que está generando el archivo.</p>
+  <div style="display:flex;gap:2rem;align-items:center;margin-top:1rem">
+    <div class="mockup" style="flex:1">
+      <div class="mockup-header">Actual</div>
+      <div class="mockup-body" style="text-align:center;padding:1.5rem">
+        <button style="background:transparent;color:#0d9488;border:1px solid #0d9488;padding:6px 14px;border-radius:6px;cursor:pointer">📄 PDF</button>
+        <p style="margin-top:0.75rem;color:#999;font-size:0.85rem">Sin indicador de carga</p>
+      </div>
+    </div>
+    <div class="mockup" style="flex:1">
+      <div class="mockup-header">Propuesto</div>
+      <div class="mockup-body" style="text-align:center;padding:1.5rem">
+        <button style="background:transparent;color:#0d9488;border:1px solid #0d9488;padding:6px 14px;border-radius:6px;opacity:0.6;display:inline-flex;align-items:center;gap:6px">
+          <span style="display:inline-block;width:14px;height:14px;border:2px solid rgba(13,148,136,0.3);border-top-color:#0d9488;border-radius:50%;animation:spin 0.6s linear infinite"></span>
+          Generando PDF...
+        </button>
+        <p style="margin-top:0.75rem;color:#999;font-size:0.85rem">Spinner pequeño + texto "Generando PDF..."</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .section { margin-bottom: 2rem; }
+</style>

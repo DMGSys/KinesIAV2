@@ -8,6 +8,7 @@ import evolucionRoutes from './routes/evoluciones.js';
 import usuarioRoutes from './routes/usuarios.js';
 import statsRoutes from './routes/stats.js';
 import reportesRoutes from './routes/reportes.js';
+import transcripcionRoutes from './routes/transcripcion.js';
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.use('/api/evoluciones', evolucionRoutes);
 app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/reportes', reportesRoutes);
+app.use('/api/transcribir', transcripcionRoutes);
 
 app.listen(PORT, () => {
   console.log(`KinesIA Backend running on port ${PORT}`);
