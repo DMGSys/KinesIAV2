@@ -127,7 +127,7 @@ export default function AdminPage() {
     setPdfLoading(pacienteId);
     try {
       const token = localStorage.getItem('kinesia_token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/reportes/paciente/${pacienteId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/reportes/paciente/${pacienteId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Error generando PDF');

@@ -178,7 +178,7 @@ export default function PacientePage() {
       const formData = new FormData();
       formData.append('audio', blob, 'audio.webm');
       const token = getToken();
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/transcribir`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/transcribir`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -259,7 +259,7 @@ export default function PacientePage() {
     setPdfLoading(true);
     try {
       const token = localStorage.getItem('kinesia_token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/reportes/paciente/${id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/reportes/paciente/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Error');

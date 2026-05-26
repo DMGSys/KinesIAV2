@@ -106,7 +106,7 @@ async function dispararNotificaciones(turnoId: string, tipo: 'creacion' | 'modif
     const turno = await Turno.findById(turnoId).populate('pacienteId', 'nombre telefono email');
     if (!turno || !turno.notificarPor.length) return;
     const paciente = turno.pacienteId as any;
-    const mensaje = `Hola ${paciente.nombre}, tu turno de kinesiología fue ${tipo === 'creacion' ? 'agendado' : 'modificado'} para el ${turno.fecha} de ${turno.horaInicio} a ${turno.horaFin}.`;
+    const mensaje = `Hola ${paciente.nombre}, tu turno de kinesiología fue ${tipo === 'creacion' ? 'agendado' : 'modificado'} para el ${turno.fecha} de ${turno.horaInicio} a ${turno.horaFin}. Recordá llegar 10 minutos antes para completar el registro de obra social.`;
     if (turno.notificarPor.includes('email') || turno.notificarPor.includes('ambos')) {
       await enviarEmail(paciente.email, 'Notificación de turno - KinesIA', mensaje);
     }
